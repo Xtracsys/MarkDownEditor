@@ -142,7 +142,7 @@ export function showBanner(
   actions: BannerAction[],
 ): Promise<string> {
   return new Promise((resolve) => {
-    const existing = slot.querySelector(`[data-banner="${id}"]`);
+    const existing = slot.querySelector(`[data-banner="${CSS.escape(id)}"]`);
     if (existing) existing.remove();
     const el = document.createElement("div");
     el.className = "banner";
@@ -166,5 +166,5 @@ export function showBanner(
 }
 
 export function removeBanner(slot: HTMLElement, id: string) {
-  slot.querySelector(`[data-banner="${id}"]`)?.remove();
+  slot.querySelector(`[data-banner="${CSS.escape(id)}"]`)?.remove();
 }

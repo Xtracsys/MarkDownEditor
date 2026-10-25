@@ -46,8 +46,11 @@ export class PreviewPane {
     this.lastBody = html;
     this.lastTheme = theme;
 
+    // When the user explicitly allows remote resources, the CSP admits
+    // remote images; by default it stays local-only and fails closed.
+    const imgSrc = this.blockRemote ? "img-src 'self' data:" : "img-src 'self' data: http: https:";
     const doc = `<!doctype html><html><head><meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src 'self' data:; style-src 'unsafe-inline'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; ${imgSrc}; style-src 'unsafe-inline'">
 <style>${previewCss}</style></head>
 <body class="theme-${theme}">${html}</body></html>`;
     this.iframe.srcdoc = doc;
@@ -85,7 +88,10 @@ export class PreviewPane {
         requestAnimationFrame(attach);
         return;
       }
+      if (doc.documentElement.dataset.wired === "1") return; // L3: once per document
+      doc.documentElement.dataset.wired = "1";
       doc.addEventListener("click", route);
+      doc.addEventListener("auxclick", (e: Event) => e.preventDefault());
     };
     requestAnimationFrame(attach);
   }

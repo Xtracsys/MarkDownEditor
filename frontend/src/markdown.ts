@@ -148,12 +148,17 @@ export function renderMarkdown(src: string, opts: RenderOptions): RenderResult {
     img.setAttribute("alt", alt || basename(originalSrc));
   }
 
-  // Links: mark external vs internal; the parent intercepts clicks.
+  // Links: mark external vs internal; the parent intercepts clicks. External
+  // anchors lose their live href entirely (L1): middle-click/Enter cannot
+  // self-navigate the sandboxed frame to remote content — routing happens
+  // only through the data attribute the parent controls.
   for (const a of Array.from(root.querySelectorAll("a"))) {
     const href = a.getAttribute("href") || "";
     if (isRemoteUrl(href)) {
       a.setAttribute("data-external", href);
       a.setAttribute("rel", "noreferrer noopener");
+      a.setAttribute("role", "link");
+      a.removeAttribute("href");
     } else if (href.startsWith("#")) {
       a.setAttribute("data-anchor", href.slice(1));
     } else {
@@ -181,7 +186,7 @@ export function localImageUrl(tabId: string, src: string): string | null {
   const rel = cleaned
     .replace(/\\/g, "/")
     .split("/")
-    .filter((s) => s !== "" && s !== ".")
+    .filter((s) => s !== "" && s !== "." && s !== "..")
     .map((s) => encodeURIComponent(s))
     .join("/");
   if (!rel) return null;

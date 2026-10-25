@@ -85,14 +85,24 @@ future nicety, not a security issue).
   security tests referencing `/etc/passwd`, package names). No credentials,
   keys, or `.env` files in the repository.
 
-### Frontend audit
-Covered: sanitizer configuration, srcdoc/CSP construction, sandbox attribute,
-link-click routing, XSS surfaces in the DOM layer (tab labels, modals,
-toasts, banners — all `textContent`, no `innerHTML` on untrusted data),
-bridge-mode detection (`?e2e=1` — the production webview cannot navigate to
-an external URL, and even if it did, bridge mode binds to loopback with the
-F1 guards), and the EOL-alignment math. Findings and fixes are recorded in
-the repository history alongside this document.
+### Frontend audit (0 high, 0 medium, 4 low, 5 informational)
+The sanitizer configuration, srcdoc/CSP construction, sandbox attribute, click
+routing, DOM-layer XSS surfaces (all `textContent`), bridge-mode activation,
+and the EOL-alignment math were verified correct — including a formal check
+that the alignment math preserves line count exactly and degrades to LF, never
+corrupting beyond a new boundary. Low-severity fixes applied:
+- **L1** external anchors no longer carry a live `href` (middle-click/Enter
+  could otherwise self-navigate the sandboxed frame to remote content —
+  confined spoofing, no script execution); `auxclick` is also prevented.
+- **L2** the "block remote resources" setting now actually relaxes the iframe
+  CSP when the user turns it off (previously it failed closed silently —
+  safe, but the setting did nothing).
+- **L3** rapid preview rebuilds could double-attach the click listener
+  (double browser tabs on one click) — now once per document.
+- **L4** refused link schemes (mailto:, tel:…) now show a toast instead of
+  failing silently.
+- Plus defense-in-depth: `..` segments filtered client-side before the image
+  handler, and `CSS.escape` on banner selectors.
 
 ## Residual risks (stated plainly)
 

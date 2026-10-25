@@ -77,7 +77,11 @@ export class Application {
     this.statusbar = document.getElementById("statusbar")!;
     this.empty = document.getElementById("empty")!;
     this.preview = new PreviewPane(this.previewHost, {
-      openExternal: (url) => void this.backend.openExternal(url),
+      openExternal: (url) => {
+        void this.backend.openExternal(url).then((err) => {
+          if (err) toast("Link not opened", err);
+        });
+      },
       remoteBlocked: (urls) => {
         if (this.settings.blockRemoteResources && urls.length) {
           toast("Remote resources blocked", `${urls.length} remote image${urls.length === 1 ? "" : "s"} in this document ${urls.length === 1 ? "was" : "were"} not loaded (offline by default).`);
