@@ -1,0 +1,18 @@
+{
+  "$schema": "https://wails.io/schemas/config.v2.json",
+  "name": "xtracsys-editor",
+  "outputfilename": "xtracsys-editor",
+  "frontend:install": "npm install",
+  "frontend:build": "npm run build",
+  "frontend:dev:watcher": "npm run dev",
+  "frontend:dev:serverUrl": "auto",
+  "author": {
+    "name": "Xtracsys"
+  },
+  "info": {
+    "productName": "Xtracsys Editor",
+    "productVersion": "0.1.0",
+    "copyright": "Copyright 2026 Xtracsys",
+    "comments": "A local-first text and Markdown editor"
+  }
+}

@@ -1,0 +1,24 @@
+# Build outputs
+/build/bin/
+/dist/
+frontend/dist/
+frontend/node_modules/
+tests/e2e/.home/
+tests/e2e/.fixtures/
+test-results/
+playwright-report/
+.cmd/
+internal/app/bind.go
+
+# Wails generated bindings (regenerated per build)
+frontend/wailsjs/go/
+frontend/wailsjs/runtime/
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
+*.log
+*.tmp
+
+# Coverage
+*.out

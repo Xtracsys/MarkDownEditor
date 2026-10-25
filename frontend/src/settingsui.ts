@@ -1,0 +1,176 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Xtracsys
+
+// The settings modal. Returns the new settings on Save, or null on cancel.
+
+import type { AppSettings } from "./ipc";
+import { showModal } from "./ui";
+
+interface Row {
+  key: string;
+  label: string;
+  sub?: string;
+  control: HTMLElement;
+}
+
+function toggle(label: string, sub: string | undefined, checked: boolean, onChange: (v: boolean) => void): Row {
+  const wrap = document.createElement("label");
+  wrap.className = "switch";
+  const input = document.createElement("input");
+  input.type = "checkbox";
+  input.checked = checked;
+  input.addEventListener("change", () => onChange(input.checked));
+  const track = document.createElement("span");
+  track.className = "track";
+  wrap.append(input, track);
+  return { key: "", label, sub, control: wrap };
+}
+
+function select(label: string, sub: string | undefined, options: [string, string][], value: string, onChange: (v: string) => void): Row {
+  const sel = document.createElement("select");
+  for (const [val, text] of options) {
+    const o = document.createElement("option");
+    o.value = val;
+    o.textContent = text;
+    sel.appendChild(o);
+  }
+  sel.value = value;
+  sel.addEventListener("change", () => onChange(sel.value));
+  return { key: "", label, sub, control: sel };
+}
+
+export async function openSettingsModal(current: AppSettings): Promise<AppSettings | null> {
+  const draft: AppSettings = { ...current };
+
+  const rows: Row[] = [
+    {
+      ...select("Theme", "Light and dark follow the supplied Xtracsys palette.", [
+        ["system", "Follow System"],
+        ["light", "Light"],
+        ["dark", "Dark"],
+      ], current.theme, (v) => (draft.theme = v)),
+    },
+    {
+      ...toggle("Auto-save", "Off by default. When on, named files save after the idle delay below. Untitled documents are never auto-saved, and files changed on disk are never auto-overwritten.",
+        current.autoSaveEnabled, (v) => (draft.autoSaveEnabled = v)),
+    },
+  ];
+
+  const delayInput = document.createElement("input");
+  delayInput.type = "number";
+  delayInput.min = "250";
+  delayInput.max = "60000";
+  delayInput.step = "250";
+  delayInput.value = String(current.autoSaveDelayMs);
+  delayInput.addEventListener("change", () => {
+    const n = Math.round(Number(delayInput.value));
+    draft.autoSaveDelayMs = Math.min(60000, Math.max(250, Number.isFinite(n) ? n : 2000));
+  });
+  rows.push({ key: "", label: "Auto-save delay (ms)", sub: "Idle time before an auto-save fires.", control: delayInput });
+
+  rows.push({
+    ...toggle("Word wrap", "Soft-wrap long lines to the window (never modifies the file).",
+      current.wordWrap, (v) => (draft.wordWrap = v)),
+  });
+  rows.push({
+    ...select("Indent size", undefined, [["2", "2 spaces"], ["4", "4 spaces"], ["8", "8 spaces"]],
+      String(current.tabSize), (v) => (draft.tabSize = Number(v))),
+  });
+  rows.push({
+    ...toggle("Insert spaces for Tab", undefined, current.insertSpaces, (v) => (draft.insertSpaces = v)),
+  });
+  rows.push({
+    ...toggle("Line numbers", undefined, current.showLineNumbers, (v) => (draft.showLineNumbers = v)),
+  });
+  rows.push({
+    ...toggle("Highlight active line", undefined, current.highlightActiveLine, (v) => (draft.highlightActiveLine = v)),
+  });
+  rows.push({
+    ...select("Editor font size", undefined, [["0", "Default"], ...[11, 12, 13, 14, 15, 16, 18].map((n) => [String(n), `${n} px`] as [string, string])],
+      String(current.editorFontSize), (v) => (draft.editorFontSize = Number(v))),
+  });
+  rows.push({
+    ...toggle("Block remote resources in preview", "On by default: the Markdown preview loads no remote images or fonts — local-first and offline.",
+      current.blockRemoteResources, (v) => (draft.blockRemoteResources = v)),
+  });
+
+  // Build DOM.
+  const overlay = document.createElement("div");
+  overlay.className = "overlay";
+  const modal = document.createElement("div");
+  modal.className = "modal";
+  modal.setAttribute("role", "dialog");
+  const head = document.createElement("div");
+  head.className = "modal-head";
+  head.textContent = "Settings";
+  const body = document.createElement("div");
+  body.className = "modal-body";
+  body.style.width = "480px";
+
+  const sectionOf = (r: Row) => {
+    if (r.label === "Theme") return "Appearance";
+    if (r.label.startsWith("Auto-save")) return "Auto-save";
+    if (r.label === "Block remote resources in preview") return "Preview";
+    return "Editor";
+  };
+  let lastSection = "";
+  for (const r of rows) {
+    const sec = sectionOf(r);
+    if (sec !== lastSection) {
+      const h = document.createElement("div");
+      h.className = "settings-section";
+      h.textContent = sec;
+      body.appendChild(h);
+      lastSection = sec;
+    }
+    const row = document.createElement("div");
+    row.className = "setting-row";
+    const labelWrap = document.createElement("div");
+    const label = document.createElement("label");
+    label.textContent = r.label;
+    labelWrap.appendChild(label);
+    if (r.sub) {
+      const sub = document.createElement("div");
+      sub.className = "setting-sub";
+      sub.textContent = r.sub;
+      labelWrap.appendChild(sub);
+    }
+    row.append(labelWrap, r.control);
+    body.appendChild(row);
+  }
+
+  const foot = document.createElement("div");
+  foot.className = "modal-foot";
+  const cancel = document.createElement("button");
+  cancel.className = "btn";
+  cancel.textContent = "Cancel";
+  const save = document.createElement("button");
+  save.className = "btn primary";
+  save.textContent = "Save";
+  foot.append(cancel, save);
+  modal.append(head, body, foot);
+  overlay.appendChild(modal);
+  document.body.appendChild(overlay);
+
+  return new Promise((resolve) => {
+    const close = (result: AppSettings | null) => {
+      overlay.remove();
+      document.removeEventListener("keydown", onKey, true);
+      resolve(result);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        close(null);
+      }
+    };
+    document.addEventListener("keydown", onKey, true);
+    overlay.addEventListener("mousedown", (e) => {
+      if (e.target === overlay) close(null);
+    });
+    cancel.addEventListener("click", () => close(null));
+    save.addEventListener("click", () => close(draft));
+  });
+}
+
+export { showModal };
