@@ -63,6 +63,17 @@ export interface AppSettings {
   blockRemoteResources: boolean;
 }
 
+// Field names match the Go JSON marshaling of internal/recovery.Entry.
+export interface RecoveryEntry {
+  id: string;
+  tabId: string;
+  path: string;
+  content: string;
+  eols: Eol[];
+  encoding: string;
+  savedAt: number;
+}
+
 export interface AppInfo {
   name: string;
   version: string;
@@ -97,6 +108,11 @@ export interface Backend {
   putSettings(s: AppSettings): Promise<void>;
   openExternal(url: string): Promise<string>;
   quitApp(): Promise<void>;
+  snapshotTab(tabId: string, path: string, content: string, eols: Eol[], encoding: string): Promise<void>;
+  clearRecovery(tabId: string): Promise<void>;
+  listRecovery(): Promise<RecoveryEntry[]>;
+  discardRecovery(ids: string[]): Promise<void>;
+  recoverEntry(id: string): Promise<OpenOutcome>;
   onWatchEvent(cb: (e: WatchEvent) => void): void;
   onMenuAction(cb: (action: string) => void): void;
   onQuitRequest(cb: () => void): void;
@@ -167,6 +183,12 @@ export function createBackend(): Backend {
     putSettings: (s) => call<void>("PutSettings", s),
     openExternal: (u) => call<string>("OpenExternalURL", u),
     quitApp: () => call<void>("QuitApp"),
+    snapshotTab: (tabId, path, content, eols, encoding) =>
+      call<void>("SnapshotTab", tabId, path, content, eols, encoding),
+    clearRecovery: (tabId) => call<void>("ClearRecovery", tabId),
+    listRecovery: () => call<RecoveryEntry[]>("ListRecovery"),
+    discardRecovery: (ids) => call<void>("DiscardRecovery", ids),
+    recoverEntry: (id) => call<OpenOutcome>("RecoverEntry", id),
     onWatchEvent: (cb) => evWatch.push(cb),
     onMenuAction: (cb) => evMenu.push(cb),
     onQuitRequest: (cb) => evQuit.push(cb),
@@ -226,6 +248,12 @@ function createBridgeBackend(): Backend {
     putSettings: (s) => call("PutSettings", s),
     openExternal: (u) => call("OpenExternalURL", u),
     quitApp: () => call("QuitApp"),
+    snapshotTab: (tabId, path, content, eols, encoding) =>
+      call("SnapshotTab", tabId, path, content, eols, encoding),
+    clearRecovery: (tabId) => call("ClearRecovery", tabId),
+    listRecovery: () => call("ListRecovery"),
+    discardRecovery: (ids) => call("DiscardRecovery", ids),
+    recoverEntry: (id) => call("RecoverEntry", id),
     onWatchEvent: (cb) => watch.push(cb),
     onMenuAction: (cb) => menu.push(cb),
     onQuitRequest: (cb) => quit.push(cb),

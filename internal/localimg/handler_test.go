@@ -67,8 +67,8 @@ func TestBlocksTraversalOutsideDocFolder(t *testing.T) {
 	os.WriteFile(outside, tinyPNG, 0o644)
 	t.Cleanup(func() { os.Remove(outside) })
 	rec := get(h, "/ximg/tab1/../../../../"+filepath.Base(dir)+"../../../etc/passwd")
-	if rec.Code != 403 && rec.Code != 404 {
-		t.Fatalf("traversal attempt code = %d", rec.Code)
+	if rec.Code != 404 {
+		t.Fatalf("traversal attempt code = %d, want indistinguishable 404", rec.Code)
 	}
 }
 
@@ -79,8 +79,14 @@ func TestSymlinkEscapeBlocked(t *testing.T) {
 	h, dir := setup(t)
 	os.Symlink(secret, filepath.Join(dir, "assets", "escape.png"))
 	rec := get(h, "/ximg/tab1/assets/escape.png")
-	if rec.Code != 403 {
+	if rec.Code != 404 {
 		t.Fatalf("symlink escape code = %d body=%q", rec.Code, rec.Body.String())
+	}
+	// The escape response must be indistinguishable from a plain not-found,
+	// so the handler cannot be used as an existence oracle.
+	rec2 := get(h, "/ximg/tab1/assets/definitely-missing.png")
+	if rec.Code != rec2.Code || rec.Body.String() != rec2.Body.String() {
+		t.Fatal("escape and not-found responses must be indistinguishable")
 	}
 }
 

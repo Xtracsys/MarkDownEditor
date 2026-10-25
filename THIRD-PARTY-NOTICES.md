@@ -23,7 +23,7 @@ All listed licenses are permissive and compatible with Apache-2.0.
 | github.com/pkg/errors | BSD-2-Clause | Wails dependency |
 | github.com/rivo/uniseg | MIT | Unicode text segmentation (Wails) |
 | github.com/samber/lo | MIT | Utilities (Wails) |
-| github.com/tkrajina/go-reflector | MIT | Wails dependency |
+| github.com/tkrajina/go-reflector | Apache-2.0 | Wails dependency |
 | golang.org/x/net | BSD-3-Clause | Go extended libraries |
 | golang.org/x/text | BSD-3-Clause | Go extended libraries |
 

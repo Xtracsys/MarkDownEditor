@@ -56,12 +56,18 @@ async function openApp(page: Page) {
   await page.waitForFunction(() => !!(window as never as { __xe?: unknown }).__xe);
 }
 
-async function openFile(page: Page, path: string) {
+async function openFile(page: Page, path: string, opts: { waitForTab?: boolean } = {}) {
   // Fire-and-forget: flows that raise modals must not be awaited here, or
-  // the caller could never click the modal.
+  // the caller could never click the modal. Callers that type into the
+  // document wait for the tab to become active (default) — typing before
+  // that lands in the previous tab.
   await page.evaluate((p) => {
     void (window as never as { __xe: { app: { openPaths(p: string[]): Promise<void> } } }).__xe.app.openPaths([p]);
   }, path);
+  if (opts.waitForTab !== false) {
+    const name = path.split("/").pop() || path;
+    await expect(page.locator(".tab.active")).toContainText(name, { timeout: 8000 });
+  }
 }
 
 async function resetSettings(page: Page) {
@@ -265,7 +271,7 @@ test("dotfiles, extensionless, and unknown extensions open and save", async ({ p
 
 test("binary files are refused with an explanation", async ({ page }) => {
   await openApp(page);
-  await openFile(page, join(docs, "binary.dat"));
+  await openFile(page, join(docs, "binary.dat"), { waitForTab: false });
   const dialog = page.locator(".modal");
   await expect(dialog).toBeVisible();
   await expect(dialog).toContainText("binary");
@@ -276,7 +282,7 @@ test("binary files are refused with an explanation", async ({ page }) => {
 
 test("unsupported encodings are explained and open read-only only by choice", async ({ page }) => {
   await openApp(page);
-  await openFile(page, join(docs, "latin1.txt"));
+  await openFile(page, join(docs, "latin1.txt"), { waitForTab: false });
   const dialog = page.locator(".modal");
   await expect(dialog).toContainText("not valid UTF-8");
   // Read-only is the explicit user choice, never silent.
@@ -376,4 +382,37 @@ test("quit guard: unsaved work blocks quit until resolved", async ({ page }) => 
   await expect(dialog).toBeHidden();
   // The file was never written.
   expect(bytes(file)).toBe("q\n");
+});
+
+test("crash recovery restores unsaved work after an abrupt restart", async ({ page }) => {
+  const file = join(docs, "crashy.md");
+  writeFileSync(file, "stable content\n", "utf8");
+  await openApp(page);
+  await resetSettings(page);
+  await openFile(page, file);
+  await page.locator(".cm-content").click();
+  await page.keyboard.press("ControlOrMeta+Home");
+  await page.keyboard.type("PRECIOUS ");
+  // Let the debounced snapshot land (4s) — then "crash" (reload, no clean close).
+  await page.waitForTimeout(6000);
+  expect(bytes(file)).toBe("stable content\n"); // nothing written to the file
+
+  await page.reload();
+  await page.waitForFunction(() => !!(window as never as { __xe?: unknown }).__xe);
+  const modal = page.locator(".modal");
+  await expect(modal).toBeVisible({ timeout: 8000 });
+  await expect(modal).toContainText("Recover unsaved work");
+  await expect(modal).toContainText("crashy.md");
+  await modal.getByRole("button", { name: "Recover All" }).click();
+
+  // The recovered tab holds the unsaved content and is marked dirty.
+  await expect
+    .poll(async () => page.locator(".cm-content").textContent(), { timeout: 8000 })
+    .toContain("PRECIOUS stable content");
+  await expect(page.locator(".tab.dirty")).toHaveCount(1);
+  // And the snapshot is consumed: a second reload offers nothing.
+  await page.reload();
+  await page.waitForFunction(() => !!(window as never as { __xe?: unknown }).__xe);
+  await page.waitForTimeout(1500);
+  await expect(page.locator(".modal")).toHaveCount(0);
 });

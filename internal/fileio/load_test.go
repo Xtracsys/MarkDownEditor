@@ -6,7 +6,9 @@ package fileio
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
+	"syscall"
 	"testing"
 )
 
@@ -177,6 +179,34 @@ func TestLoadTooLarge(t *testing.T) {
 	_, issue := Load(writeTemp(t, []byte("0123456789ABCDEF more")))
 	if issue == nil || issue.Reason != "too-large" {
 		t.Fatalf("issue = %+v, want too-large", issue)
+	}
+}
+
+func TestLoadRefusesTooManyLines(t *testing.T) {
+	// A file of bare newlines amplifies memory: two slice entries per line.
+	// The guard refuses before allocating.
+	old := MaxFileSize
+	MaxFileSize = 64 << 20
+	t.Cleanup(func() { MaxFileSize = old })
+	big := strings.Repeat("\n", 2_100_000)
+	_, issue := Load(writeTemp(t, []byte(big)))
+	if issue == nil || issue.Reason != "too-many-lines" {
+		t.Fatalf("issue = %+v, want too-many-lines", issue)
+	}
+}
+
+func TestLoadRefusesNonRegularFile(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("no fifo on windows")
+	}
+	dir := t.TempDir()
+	fifo := filepath.Join(dir, "pipe")
+	if err := syscall.Mkfifo(fifo, 0o600); err != nil {
+		t.Skipf("mkfifo unavailable: %v", err)
+	}
+	_, issue := Load(fifo)
+	if issue == nil || issue.Reason != "not-regular" {
+		t.Fatalf("issue = %+v, want not-regular", issue)
 	}
 }
 

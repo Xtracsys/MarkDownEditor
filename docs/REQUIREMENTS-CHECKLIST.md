@@ -77,8 +77,11 @@ and how it is verified. Verification codes: **[T]** automated test,
   skips untitled; Save As is explicit)
 - When disabled, no writes until explicit save — **[E2E]** “unsaved edits
   never touch the file”
-- No crash-recovery storage exists (disclosed; none created) — **[D]** —
-  documented limitation, nothing hidden
+- Crash recovery: dirty buffers snapshot to app-data only (0600, atomic),
+  disclosed in Settings/README, restored as unsaved tabs after a crash —
+  **[T]** internal/recovery suite; **[E2E]** “crash recovery restores unsaved
+  work after an abrupt restart” (real reload-as-crash, recover, and
+  snapshot-consumption checks)
 - Save failures shown clearly; never reported as success — **[D]** SaveResponse
   always carries the failure; **[E2E]** external-change decision flow
 
@@ -135,6 +138,11 @@ and how it is verified. Verification codes: **[T]** automated test,
   brand sheet included deliberately as the visual authority)
 - Apache ≠ trademark rights — TRADEMARKS.md
 - No publishing/public releases without approval — none performed
+
+## Security audit — docs/SECURITY-AUDIT.md
+
+Three audit passes + dependency/secrets scans; all medium/low findings fixed
+with regression tests; toolchain pinned to Go 1.26.10 for stdlib CVE fixes.
 
 ## 9. Acceptance tests — see §1–§6 above; every item that can be tested
 ## headlessly is covered by an automated suite. Remaining interactive items

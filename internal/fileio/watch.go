@@ -149,6 +149,10 @@ func inspect(path string, known KnownState, missing bool) (ev WatchKind, newKnow
 		}
 		return "", KnownState{}, missing
 	}
+	if !fi.Mode().IsRegular() {
+		// Never read devices/sockets/FIFOs from the watcher.
+		return "", KnownState{}, missing
+	}
 	if missing {
 		// File reappeared: report restored if its content differs from what
 		// we last knew, otherwise just clear the flag silently.

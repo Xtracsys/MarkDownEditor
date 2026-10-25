@@ -77,20 +77,21 @@ func BuildBytes(content, encoding string, eols []string) ([]byte, error) {
 //     one orphan temp file, never a truncated file.
 func SaveDocument(path string, data []byte, known *KnownState, overwrite bool) (*SaveResult, *SaveIssue) {
 	target := path
-	symlink := false
 	if fi, err := os.Lstat(path); err == nil && fi.Mode()&os.ModeSymlink != 0 {
 		resolved, rerr := filepath.EvalSymlinks(path)
 		if rerr != nil {
 			return nil, &SaveIssue{Reason: "io", Message: "This file is a symbolic link whose target could not be resolved, so it was not saved.", Detail: rerr.Error()}
 		}
 		target = resolved
-		symlink = true
 	}
 
 	mode := os.FileMode(0644)
 	existing := false
 	var disk []byte
 	if fi, err := os.Stat(target); err == nil {
+		if !fi.Mode().IsRegular() {
+			return nil, &SaveIssue{Reason: "io", Message: "The target is not a regular file, so it was not saved.", Detail: target}
+		}
 		existing = true
 		mode = fi.Mode().Perm()
 		disk, err = os.ReadFile(target)
@@ -117,6 +118,18 @@ func SaveDocument(path string, data []byte, known *KnownState, overwrite bool) (
 		}
 	}
 
+	if existing && known != nil && !overwrite {
+		// Close the check→rename window: if the file changed on disk since the
+		// hash guard above ran, surface an external-change decision instead
+		// of clobbering the newer content.
+		if cur, rerr := os.ReadFile(target); rerr == nil && !bytes.Equal(cur, disk) {
+			return nil, &SaveIssue{
+				Reason:  "external-change",
+				Message: "The file changed on disk while the save was being prepared.",
+			}
+		}
+	}
+
 	dir := filepath.Dir(target)
 	base := filepath.Base(target)
 	tmpName := filepath.Join(dir, tempName(base))
@@ -133,7 +146,6 @@ func SaveDocument(path string, data []byte, known *KnownState, overwrite bool) (
 	if err != nil {
 		return nil, &SaveIssue{Reason: "io", Message: "The file was written but its new state could not be read back.", Detail: err.Error()}
 	}
-	_ = symlink
 	return &SaveResult{Written: true, Hash: newHash, Size: fi.Size(), ModTimeNanos: fi.ModTime().UnixNano()}, nil
 }
 

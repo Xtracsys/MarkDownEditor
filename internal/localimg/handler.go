@@ -72,15 +72,17 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	joined := filepath.Join(docDir, filepath.FromSlash(rel))
 	real, err := filepath.EvalSymlinks(joined)
 	if err != nil {
-		http.Error(w, "image not found: "+filepath.Base(rel), http.StatusNotFound)
+		http.Error(w, "image not found", http.StatusNotFound)
 		return
 	}
 	if real != rootReal && !strings.HasPrefix(real, rootReal+string(filepath.Separator)) {
-		http.Error(w, "blocked: path escapes the document folder", http.StatusForbidden)
+		// Same status and body as not-found: escape attempts must not learn
+		// whether the escaped path exists.
+		http.Error(w, "image not found", http.StatusNotFound)
 		return
 	}
 	fi, err := os.Stat(real)
-	if err != nil || fi.IsDir() {
+	if err != nil || fi.IsDir() || !fi.Mode().IsRegular() {
 		http.Error(w, "not an image", http.StatusNotFound)
 		return
 	}
@@ -104,6 +106,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Content-Type", ct)
+	w.Header().Set("X-Content-Type-Options", "nosniff")
 	w.Header().Set("Content-Length", fmt.Sprint(len(data)))
 	w.Header().Set("Cache-Control", "no-store")
 	w.WriteHeader(http.StatusOK)

@@ -9,12 +9,17 @@ import (
 	"encoding/hex"
 	"fmt"
 	"os"
+	"strings"
 	"unicode/utf8"
 )
 
 // MaxFileSize caps what the editor will open. Package-level (not const) so
 // tests can exercise the refusal path without allocating gigabytes.
 var MaxFileSize int64 = 32 << 20 // 32 MiB
+
+// MaxLines guards against memory amplification: a file of only newlines
+// would otherwise allocate two string-slice entries per line.
+const MaxLines = 2_000_000
 
 // Binary sniff window: NUL bytes anywhere make a file binary; the window only
 // shapes the error message.
@@ -56,6 +61,9 @@ func Load(path string) (*LoadResult, *Issue) {
 	}
 	if fi.IsDir() {
 		return nil, &Issue{Reason: "directory", Message: "That path is a folder, not a file."}
+	}
+	if !fi.Mode().IsRegular() {
+		return nil, &Issue{Reason: "not-regular", Message: "That path is not a regular file (device, socket, or pipe) and is not opened."}
 	}
 	if fi.Size() > MaxFileSize {
 		return nil, &Issue{
@@ -105,6 +113,12 @@ func Load(path string) (*LoadResult, *Issue) {
 		text, encoding = string(data), EncUTF8
 	}
 
+	if strings.Count(text, "\n")+strings.Count(text, "\r") > MaxLines {
+		return nil, &Issue{
+			Reason:  "too-many-lines",
+			Message: fmt.Sprintf("The file has more than %s lines, above this editor's limit.", humanCount(MaxLines)),
+		}
+	}
 	lines, eols := ParseEols(text)
 	pred, summary := EolInfo(eols)
 	res := &LoadResult{
@@ -142,6 +156,9 @@ func LoadReadOnly(path string) (*LoadResult, *Issue) {
 	if fi.IsDir() {
 		return nil, &Issue{Reason: "directory", Message: "That path is a folder, not a file."}
 	}
+	if !fi.Mode().IsRegular() {
+		return nil, &Issue{Reason: "not-regular", Message: "That path is not a regular file (device, socket, or pipe) and is not opened."}
+	}
 	if fi.Size() > MaxFileSize {
 		return nil, &Issue{Reason: "too-large", Message: fmt.Sprintf("The file is %s, larger than this editor's %s limit.", humanBytes(fi.Size()), humanBytes(MaxFileSize))}
 	}
@@ -153,6 +170,9 @@ func LoadReadOnly(path string) (*LoadResult, *Issue) {
 		return nil, &Issue{Reason: "binary", Message: "This file is binary and cannot be displayed as text."}
 	}
 	text := LossyUTF8(data)
+	if strings.Count(text, "\n")+strings.Count(text, "\r") > MaxLines {
+		return nil, &Issue{Reason: "too-many-lines", Message: "This file has too many lines to open safely."}
+	}
 	_, eols := ParseEols(text)
 	pred, summary := EolInfo(eols)
 	return &LoadResult{
@@ -244,6 +264,13 @@ func hexPreview(data []byte, offset int) string {
 func hashBytes(data []byte) string {
 	h := sha256.Sum256(data)
 	return hex.EncodeToString(h[:])
+}
+
+func humanCount(n int64) string {
+	if n >= 1_000_000 {
+		return fmt.Sprintf("%d million", n/1_000_000)
+	}
+	return fmt.Sprintf("%d", n)
 }
 
 func humanBytes(n int64) string {

@@ -94,6 +94,17 @@ export async function openSettingsModal(current: AppSettings): Promise<AppSettin
       current.blockRemoteResources, (v) => (draft.blockRemoteResources = v)),
   });
 
+  // Disclosed, always-on crash recovery (informational row).
+  const recovInfo = document.createElement("div");
+  recovInfo.style.cssText = "color: var(--text-faint); font-size: 11px; max-width: 260px; text-align: right;";
+  recovInfo.textContent = "Always on";
+  rows.push({
+    key: "recovery",
+    label: "Crash recovery",
+    sub: "Unsaved changes are periodically copied to this app's private data folder and offered for recovery after a crash. They never touch your files or your project folders.",
+    control: recovInfo,
+  });
+
   // Build DOM.
   const overlay = document.createElement("div");
   overlay.className = "overlay";
@@ -111,6 +122,7 @@ export async function openSettingsModal(current: AppSettings): Promise<AppSettin
     if (r.label === "Theme") return "Appearance";
     if (r.label.startsWith("Auto-save")) return "Auto-save";
     if (r.label === "Block remote resources in preview") return "Preview";
+    if (r.label === "Crash recovery") return "Preview";
     return "Editor";
   };
   let lastSection = "";

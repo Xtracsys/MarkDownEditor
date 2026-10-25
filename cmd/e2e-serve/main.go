@@ -22,6 +22,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
@@ -34,10 +35,44 @@ func main() {
 	addr := flag.String("addr", "127.0.0.1:34115", "loopback listen address")
 	dist := flag.String("dist", "frontend/dist", "built frontend directory")
 	home := flag.String("home", "", "redirect the OS config dir (hermetic settings)")
+	fresh := flag.Bool("fresh-home", false, "wipe the -home dir at startup for hermetic test runs")
 	flag.Parse()
 
-	if *home != "" {
-		abs, _ := filepath.Abs(*home)
+	if err := serve(*addr, *dist, *home, *fresh); err != nil {
+		log.Fatal(err)
+	}
+}
+
+// guard rejects cross-origin and non-loopback requests. The bridge can write
+// files through SaveTab, so a random webpage in the developer's browser must
+// never be able to drive it: requests carrying an Origin header (all
+// cross-site fetches do; a CORS simple-request carries it too) or a Host
+// other than the loopback address we bound (DNS-rebinding defense) are
+// refused. Content-Type must be JSON, which forces a CORS preflight for
+// cross-site browsers even before the Origin check.
+func guard(w http.ResponseWriter, r *http.Request, addr string) bool {
+	if r.Header.Get("Origin") != "" {
+		http.Error(w, "cross-origin requests are not accepted", http.StatusForbidden)
+		return false
+	}
+	if r.Host != addr {
+		http.Error(w, "unknown host", http.StatusForbidden)
+		return false
+	}
+	if ct := r.Header.Get("Content-Type"); ct != "" && !strings.HasPrefix(ct, "application/json") {
+		http.Error(w, "json required", http.StatusUnsupportedMediaType)
+		return false
+	}
+	return true
+}
+
+func serve(addr, dist, home string, fresh bool) error {
+
+	if home != "" {
+		abs, _ := filepath.Abs(home)
+		if fresh {
+			os.RemoveAll(abs)
+		}
 		os.MkdirAll(abs, 0o700)
 		os.Setenv("HOME", abs) // unix: UserConfigDir
 		os.Setenv("APPDATA", filepath.Join(abs, "AppData"))
@@ -51,9 +86,9 @@ func main() {
 	mux := http.NewServeMux()
 
 	// Static frontend.
-	static, err := fs.Sub(os.DirFS(*dist), ".")
+	static, err := fs.Sub(os.DirFS(dist), ".")
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	mux.Handle("/", http.FileServer(http.FS(static)))
 
@@ -86,9 +121,9 @@ func main() {
 		json.NewEncoder(w).Encode(map[string]interface{}{"result": result})
 	})
 
-	log.Printf("e2e bridge listening on http://%s/?e2e=1", *addr)
-	srv := &http.Server{Addr: *addr, Handler: mux, ReadHeaderTimeout: 5 * time.Second}
-	log.Fatal(srv.ListenAndServe())
+	log.Printf("e2e bridge listening on http://%s/?e2e=1", addr)
+	srv := &http.Server{Addr: addr, Handler: mux, ReadHeaderTimeout: 5 * time.Second}
+	return srv.ListenAndServe()
 }
 
 // dispatch mirrors the wails binding surface explicitly — no reflection.
@@ -192,6 +227,48 @@ func dispatch(a *app.App, method string, args []json.RawMessage) (interface{}, e
 	case "QuitApp":
 		a.QuitApp()
 		return nil, nil
+	case "SnapshotTab":
+		var tabId, path, content string
+		var eols []string
+		var encoding string
+		if err := dec(0, &tabId); err != nil {
+			return nil, err
+		}
+		if err := dec(1, &path); err != nil {
+			return nil, err
+		}
+		if err := dec(2, &content); err != nil {
+			return nil, err
+		}
+		if err := dec(3, &eols); err != nil {
+			return nil, err
+		}
+		if err := dec(4, &encoding); err != nil {
+			return nil, err
+		}
+		return nil, a.SnapshotTab(tabId, path, content, eols, encoding)
+	case "ClearRecovery":
+		var id string
+		if err := dec(0, &id); err != nil {
+			return nil, err
+		}
+		a.ClearRecovery(id)
+		return nil, nil
+	case "ListRecovery":
+		return a.ListRecovery(), nil
+	case "DiscardRecovery":
+		var ids []string
+		if err := dec(0, &ids); err != nil {
+			return nil, err
+		}
+		a.DiscardRecovery(ids)
+		return nil, nil
+	case "RecoverEntry":
+		var id string
+		if err := dec(0, &id); err != nil {
+			return nil, err
+		}
+		return a.RecoverEntry(id), nil
 	case "_EmitMenuAction": // test hook: simulate a native menu click
 		var action string
 		if err := dec(0, &action); err != nil {

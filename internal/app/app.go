@@ -10,12 +10,15 @@ import (
 	"context"
 	"fmt"
 	"net/url"
+	"os"
 	goruntime "runtime"
 	"sync"
+	"time"
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 
 	"github.com/xtracsys/xtracsys-editor/internal/fileio"
+	"github.com/xtracsys/xtracsys-editor/internal/recovery"
 	"github.com/xtracsys/xtracsys-editor/internal/settings"
 )
 
@@ -84,6 +87,7 @@ type App struct {
 
 	watcher  *fileio.Watcher
 	settings settings.Settings
+	recov    *recovery.Store
 
 	// eventSink routes Go→frontend events. In the desktop app it wraps
 	// runtime.EventsEmit; the E2E bridge server swaps it for SSE.
@@ -114,6 +118,9 @@ func (a *App) InitHeadless(ctx context.Context, sink func(name string, data inte
 	a.headless = true
 	a.SetEventSink(sink)
 	a.settings, _ = settings.Load()
+	if dir, err := settings.Dir(); err == nil {
+		a.recov, _ = recovery.New(dir)
+	}
 	a.watcher = fileio.NewWatcher(func(ev fileio.WatchEvent) {
 		a.emitEvent(EventWatch, ev)
 	})
@@ -137,6 +144,13 @@ func (a *App) emitEvent(name string, data interface{}) {
 func (a *App) Startup(ctx context.Context) {
 	a.ctx = ctx
 	a.settings, _ = settings.Load()
+	if dir, err := settings.Dir(); err == nil {
+		st, serr := recovery.New(dir)
+		a.recov = st
+		fmt.Printf("DBG recovery.New dir=%q err=%v storeErr=%v\n", dir, err, serr)
+	} else {
+		fmt.Printf("DBG settings.Dir err=%v\n", err)
+	}
 	a.watcher = fileio.NewWatcher(func(ev fileio.WatchEvent) {
 		a.emitEvent(EventWatch, ev)
 	})
@@ -338,6 +352,102 @@ func (a *App) CloseTab(tabId string) {
 	if a.watcher != nil {
 		a.watcher.Remove(tabId)
 	}
+}
+
+// SnapshotTab stores a crash-recovery snapshot of an unsaved buffer under the
+// OS app-data folder. Originals are never touched; restoring produces a
+// normal dirty tab the user saves deliberately.
+func (a *App) SnapshotTab(tabId, path, content string, eols []string, encoding string) error {
+	if a.recov == nil {
+		return nil // recovery unavailable; editing still works
+	}
+	if _, err := fileio.Rebuild(content, eols); err != nil {
+		return err // never snapshot something we could not save faithfully
+	}
+	return a.recov.Save(recovery.Entry{
+		ID: tabId, TabID: tabId, Path: path,
+		Content: content, Eols: eols, Encoding: encoding,
+		SavedAt: time.Now().Unix(),
+	})
+}
+
+// ClearRecovery drops a tab's snapshot after a clean save, close, or discard.
+func (a *App) ClearRecovery(tabId string) {
+	if a.recov != nil {
+		a.recov.Clear(tabId)
+	}
+}
+
+// ListRecovery returns snapshots left behind by a crash or forced quit.
+func (a *App) ListRecovery() []recovery.Entry {
+	if a.recov == nil {
+		return []recovery.Entry{}
+	}
+	list, err := a.recov.List()
+	if err != nil {
+		return []recovery.Entry{}
+	}
+	return list
+}
+
+// DiscardRecovery deletes the given snapshots (explicit user choice).
+func (a *App) DiscardRecovery(ids []string) {
+	if a.recov != nil {
+		a.recov.Clear(ids...)
+	}
+}
+
+// RecoverEntry restores a snapshot as a new dirty tab.
+func (a *App) RecoverEntry(id string) OpenOutcome {
+	if a.recov == nil {
+		return OpenOutcome{Issue: &fileio.Issue{Reason: "io", Message: "Recovery is unavailable."}}
+	}
+	entries, err := a.recov.List()
+	if err != nil {
+		return OpenOutcome{Issue: &fileio.Issue{Reason: "io", Message: "Recovery data could not be read."}}
+	}
+	var entry *recovery.Entry
+	for i := range entries {
+		if entries[i].ID == id {
+			entry = &entries[i]
+			break
+		}
+	}
+	if entry == nil {
+		return OpenOutcome{Issue: &fileio.Issue{Reason: "not-found", Message: "That recovery snapshot no longer exists."}}
+	}
+	encoding := entry.Encoding
+	if !fileio.ValidEncoding(encoding) {
+		encoding = fileio.EncUTF8
+	}
+	eols := entry.Eols
+	if eols == nil {
+		eols = []string{""}
+	}
+	pred, summary := fileio.EolInfo(eols)
+	res := &fileio.LoadResult{
+		Path:        entry.Path,
+		Content:     entry.Content,
+		Encoding:    encoding,
+		Eols:        eols,
+		DefaultEol:  pred,
+		EolSummary:  string(summary),
+		Warnings:    []string{},
+	}
+	// Known on-disk state = whatever is on disk right now, so the watcher and
+	// the save guard treat the restored tab consistently from here on.
+	if fi, err := os.Stat(entry.Path); err == nil && fi.Mode().IsRegular() {
+		if data, rerr := os.ReadFile(entry.Path); rerr == nil {
+			res.Hash = fileio.HashOf(data)
+		}
+		res.Size = fi.Size()
+		res.ModTimeNanos = fi.ModTime().UnixNano()
+	}
+	a.mu.Lock()
+	tab := a.newTabLocked(entry.Path, res)
+	a.tabs[tab.TabId].dirty = true
+	a.mu.Unlock()
+	return OpenOutcome{Tab: tab}
 }
 
 // SetDirty mirrors a tab's unsaved state so the window-close guard works even

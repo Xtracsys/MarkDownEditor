@@ -1,0 +1,17 @@
+import { chromium } from "@playwright/test";
+const browser = await chromium.launch();
+const page = await browser.newPage();
+page.on("console", (m) => { if (m.type() === "error") console.log("PAGE-ERR:", m.text()); });
+page.on("request", (r) => { if (r.url().includes("Snapshot")) console.log("REQ:", r.url()); });
+page.on("requestfailed", (r) => { if (r.url().includes("api/")) console.log("FAILED:", r.url(), r.failure()?.errorText); });
+await page.goto("http://127.0.0.1:34121/?e2e=1");
+await page.waitForFunction(() => !!window.__xe);
+await page.evaluate(() => { void window.__xe.app.openPaths(["/tmp/e2e-docs/demo.md"]); });
+await page.waitForTimeout(800);
+await page.locator(".cm-content").click();
+await page.keyboard.type("DBG ");
+console.log("typed, waiting 6s...");
+await page.waitForTimeout(6000);
+const resp = await page.evaluate(async () => await window.__xe.app["getSettings"] ? "has" : "no");
+console.log("post-wait", resp);
+await browser.close();

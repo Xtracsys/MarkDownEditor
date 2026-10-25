@@ -33,8 +33,9 @@ var ErrCarriageReturn = errors.New("content contains a bare carriage return; the
 // final entry is "" when the text does not end with a newline. Lines never
 // contain CR or LF themselves.
 func ParseEols(text string) (lines []string, eols []string) {
-	lines = make([]string, 0, strings.Count(text, "\n")+1)
-	eols = make([]string, 0, len(lines))
+	n := strings.Count(text, "\n") + strings.Count(text, "\r") + 1
+	lines = make([]string, 0, n)
+	eols = make([]string, 0, n)
 	start := 0
 	i := 0
 	for i < len(text) {

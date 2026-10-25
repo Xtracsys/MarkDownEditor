@@ -50,6 +50,7 @@ export class Application {
   private settings!: AppSettings;
   private preview: PreviewPane;
   private autosaveTimer: number | undefined;
+  private snapshotTimer: number | undefined;
   private previewDebounce: number | undefined;
   private dirtyRecheck: number | undefined;
   private saveInFlight = new Set<string>();
@@ -101,6 +102,7 @@ export class Application {
     this.wireBackendEvents();
     this.bindShortcuts();
     await this.newTab();
+    await this.offerRecovery();
   }
 
   // ------------------------------------------------------------------
@@ -216,6 +218,7 @@ export class Application {
     if (idx < 0) return;
     this.tabs.splice(idx, 1);
     await this.backend.closeTab(tab.info.tabId);
+    void this.backend.clearRecovery(tab.info.tabId);
     if (this.active === tab) {
       const next = this.tabs[idx] || this.tabs[idx - 1] || null;
       this.active = null;
@@ -292,6 +295,7 @@ export class Application {
       tab.savedContent = content;
       tab.savedEols = eols;
       tab.extState = "none";
+      void this.backend.clearRecovery(tab.info.tabId);
       removeBanner(this.bannerSlot, `ext-${tab.info.tabId}`);
       const pathChanged = tab.info.path !== path;
       tab.info.path = resp.tab?.path || path;
@@ -680,7 +684,10 @@ export class Application {
         }
       }
     } else {
-      for (const tab of dirty) await this.backend.setDirty(tab.info.tabId, false);
+      for (const tab of dirty) {
+        await this.backend.setDirty(tab.info.tabId, false);
+        void this.backend.clearRecovery(tab.info.tabId);
+      }
     }
     this.quitting = true;
     await this.backend.quitApp();
@@ -724,6 +731,7 @@ export class Application {
           this.scheduleDirtyRecheck(tab);
           this.refreshPreview();
           this.resetAutosaveTimer();
+          this.scheduleSnapshot();
         }
         if (update.docChanged || update.selectionSet) this.updateCursor();
       }),
@@ -846,6 +854,82 @@ export class Application {
         return;
       }
     }
+  }
+
+  // ------------------------------------------------------------------
+  // Crash recovery
+  //
+  // Dirty buffers are snapshotted to the app's private data folder a few
+  // seconds after edits settle. Snapshots are cleared on save, clean close,
+  // or explicit discard. After a crash, the next start offers recovery.
+
+  private scheduleSnapshot() {
+    window.clearTimeout(this.snapshotTimer);
+    this.snapshotTimer = window.setTimeout(() => void this.snapshotDirty(), 4000);
+  }
+
+  private async snapshotDirty() {
+    for (const tab of this.tabs) {
+      if (!tab.dirty) continue;
+      const content = tab.state.doc.toString();
+      const eols = tab.state.field(eolField).slice();
+      try {
+        await this.backend.snapshotTab(tab.info.tabId, tab.info.path, content, eols, tab.info.encoding);
+      } catch {
+        // Recovery is best-effort; never disturb editing on failure.
+      }
+    }
+  }
+
+  private async offerRecovery() {
+    let entries: import("./ipc").RecoveryEntry[] = [];
+    try {
+      entries = await this.backend.listRecovery();
+    } catch {
+      return;
+    }
+    if (!entries.length) return;
+    const names = entries.map((e) => {
+      const name = e.path ? e.path.split("/").pop() || e.path : "Untitled";
+      return `• ${name}${e.path ? "" : " (never saved)"} — recovered copy from ${new Date(e.savedAt * 1000).toLocaleTimeString()}`;
+    });
+    const choice = await showModal({
+      title: "Recover unsaved work?",
+      body:
+        `The previous session ended with unsaved changes in ${entries.length} document${entries.length === 1 ? "" : "s"}:\n\n` +
+        names.join("\n") +
+        "\n\nRecovered documents open as unsaved tabs — nothing is written to your files until you save. Snapshots live only in this app's private data folder.",
+      buttons: [
+        { label: "Recover All", value: "recover", primary: true },
+        { label: "Discard", value: "discard", danger: true },
+        { label: "Decide Later", value: "later" },
+      ],
+      cancelValue: "later",
+    });
+    if (choice === "discard") {
+      await this.backend.discardRecovery(entries.map((e) => e.id));
+      return;
+    }
+    if (choice !== "recover") return;
+    for (const e of entries) {
+      const oc = await this.backend.recoverEntry(e.id);
+      if (oc.tab) {
+        const state = await makeState({
+          info: oc.tab,
+          settings: this.settings,
+          theme: effective(),
+          extraKeys: this.editorKeys(),
+        });
+        const tab = new Tab(oc.tab, state);
+        tab.dirty = true;
+        tab.savedContent = "";
+        this.tabs.push(tab);
+        this.setActive(tab);
+        await this.backend.setDirty(tab.info.tabId, true);
+        await this.backend.discardRecovery([e.id]);
+      }
+    }
+    toast("Recovered", "Documents restored as unsaved tabs. Save them to keep the changes.");
   }
 
   // ------------------------------------------------------------------

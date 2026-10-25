@@ -2,15 +2,10 @@
 // Copyright 2026 Xtracsys
 
 import { defineConfig } from "@playwright/test";
-import { mkdirSync, rmSync } from "node:fs";
 import { resolve } from "node:path";
 
 const port = 34120;
-const home = resolve(__dirname, "tests/e2e/.home");
-
-// Clean the hermetic settings home before a run.
-rmSync(home, { recursive: true, force: true });
-mkdirSync(home, { recursive: true });
+const here = __dirname;
 
 export default defineConfig({
   testDir: "./tests/e2e",
@@ -23,9 +18,11 @@ export default defineConfig({
     viewport: { width: 1280, height: 840 },
   },
   webServer: {
-    command: `go run ./cmd/e2e-serve -addr 127.0.0.1:${port} -dist frontend/dist -home ${home}`,
+    command: `go run ./cmd/e2e-serve -addr 127.0.0.1:${port} -dist frontend/dist -home ${resolve(here, "tests/e2e/.home")} -fresh-home`,
     url: `http://127.0.0.1:${port}/`,
-    reuseExistingServer: true,
+    reuseExistingServer: false,
     timeout: 60000,
+    stdout: "pipe",
+    stderr: "pipe",
   },
 });

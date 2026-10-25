@@ -40,3 +40,6 @@ attacker to already control the machine.
   http(s) link, scheme-validated in Go before `BrowserOpenURL`.
 - Saves are atomic (temp + rename) and refuse to clobber externally changed
   files without an explicit decision.
+- Crash-recovery snapshots may contain private document content; they are
+  written with 0600 permissions to the app-data folder only, cleared on
+  save/close/discard, and never stored next to documents.

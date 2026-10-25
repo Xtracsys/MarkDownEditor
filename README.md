@@ -75,6 +75,15 @@ documents, and never files that changed on disk (no silent overwrites). Your
 choice persists across launches. When off, editing never writes to the
 original file until you explicitly save.
 
+## Crash recovery
+
+Unsaved changes are periodically snapshotted to the app's private data
+folder (never next to your documents, never inside them). If the editor
+crashes or is force-quit, the next start offers to restore them as unsaved
+tabs — **nothing is written to your files until you save**. Snapshots are
+private (0600), cleared on save/close/discard, and disclosed in Settings.
+This feature is always on; there is no crash-recovery data anywhere else.
+
 ## Settings & state
 
 Preferences live in the OS application-data folder
@@ -131,6 +140,13 @@ for the live matrix:
 | macOS 13+ (arm64, x86_64, universal) | ✅ | ✅ (Go, vitest, E2E) | Ad-hoc signed; not notarized |
 | Windows 10 1809+ (x64) | via CI workflow | CI: Go + vitest + E2E | Runtime testing pending hardware |
 | Linux (x64/arm64, webkit2gtk-4.1) | via CI workflow | CI: Go + vitest + E2E | Runtime testing pending hardware |
+
+## Security
+
+A full security audit (three independent reviews plus govulncheck/npm-audit
+dependency scans) with all findings and fixes is in
+[docs/SECURITY-AUDIT.md](docs/SECURITY-AUDIT.md). Report vulnerabilities via
+[SECURITY.md](SECURITY.md).
 
 ## License & trademarks
 

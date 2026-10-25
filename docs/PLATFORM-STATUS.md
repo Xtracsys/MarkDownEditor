@@ -18,7 +18,7 @@ that build. Last updated: 2026-10-24 (v0.1.0 development).
 | | macOS 13+ | Windows 10 1809+ | Linux (webkit2gtk-4.1) |
 | --- | --- | --- | --- |
 | Architectures | arm64 + x86_64 (universal) | x64 | x64, arm64 |
-| **Built** | ✅ universal `.app`, ad-hoc signed | ⏳ CI workflow written, not yet run | ⏳ CI workflow written, not yet run |
+| **Built** | ✅ universal `.app` + DMG, ad-hoc signed | ✅ x64 `.exe` cross-built locally (zip); NSIS installer via CI | ❌ needs CI (webkit2gtk cgo; no Linux toolchain locally) |
 | **Auto-tested** (go / vitest / E2E) | ✅ / ✅ / ✅ | ⏳ CI pending | ⏳ CI pending |
 | **Manually tested** | ✅ launch + core edit/save smoke test (this machine, macOS 27 arm64) | ❌ | ❌ |
 | **Packaging** | `.app` bundle ✅; DMG not produced yet | `.exe` via CI; NSIS installer not configured | binary; AppImage/deb not configured |
