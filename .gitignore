@@ -2,6 +2,7 @@
 /build/bin/
 /dist/
 frontend/dist/
+node_modules/
 frontend/node_modules/
 tests/e2e/.home/
 tests/e2e/.fixtures/
