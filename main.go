@@ -6,7 +6,9 @@ package main
 import (
 	"context"
 	"embed"
+	"os"
 	goruntime "runtime"
+	"strings"
 
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/menu"
@@ -24,6 +26,13 @@ var assets embed.FS
 
 func main() {
 	appSvc := app.NewApp()
+
+	// Documents passed on the command line (Windows/Linux "Open With",
+	// `xtracsys-editor file.txt`, and drag-onto-Dock-icon on some setups).
+	// macOS Finder opens arrive separately as Apple Events (Mac.OnFileOpen
+	// below); both flow through the same queued external-open pipeline.
+	appSvc.QueueExternalOpen(fileArgs(os.Args[1:]))
+
 	imageHandler := &localimg.Handler{ResolveTab: appSvc.ResolveTabPath}
 
 	err := wails.Run(&options.App{
@@ -37,6 +46,20 @@ func main() {
 			Assets:  assets,
 			Handler: imageHandler,
 		},
+		DragAndDrop: &options.DragAndDrop{
+			EnableFileDrop:      true,
+			DisableWebViewDrop:  true, // the webview must never navigate to dropped files
+			CSSDropProperty:     "--wails-drop-target",
+			CSSDropValue:        "drop",
+		},
+		SingleInstanceLock: &options.SingleInstanceLock{
+			UniqueId: "editors.xtracsys.xtracsys-editor",
+			OnSecondInstanceLaunch: func(data options.SecondInstanceData) {
+				// Windows/Linux: a second `open file.exe` launch hands its
+				// arguments to this instance and exits.
+				appSvc.QueueExternalOpen(fileArgs(data.Args))
+			},
+		},
 		Menu:      buildMenu(appSvc),
 		OnStartup: appSvc.Startup,
 		OnBeforeClose: func(ctx context.Context) bool {
@@ -47,6 +70,7 @@ func main() {
 		},
 		Bind: []interface{}{appSvc},
 		Mac: &mac.Options{
+			OnFileOpen: appSvc.QueueExternalOpenOne,
 			About: &mac.AboutInfo{
 				Title:   "Xtracsys Editor",
 				Message: "A local-first text and Markdown editor.\nVersion " + app.AppVersion + "\nCopyright 2026 Xtracsys — Apache License 2.0",
@@ -56,6 +80,20 @@ func main() {
 	if err != nil {
 		println("Error:", err.Error())
 	}
+}
+
+// fileArgs extracts document paths from launch arguments: skips flags and
+// empties so `-psn_*`-style launch noise never becomes a document.
+func fileArgs(args []string) []string {
+	out := make([]string, 0, len(args))
+	for _, a := range args {
+		a = strings.TrimSpace(a)
+		if a == "" || strings.HasPrefix(a, "-") {
+			continue
+		}
+		out = append(out, a)
+	}
+	return out
 }
 
 // buildMenu creates the native menu. macOS gets the standard App and Edit

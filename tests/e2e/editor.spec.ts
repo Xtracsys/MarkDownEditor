@@ -416,3 +416,37 @@ test("crash recovery restores unsaved work after an abrupt restart", async ({ pa
   await page.waitForTimeout(1500);
   await expect(page.locator(".modal")).toHaveCount(0);
 });
+
+
+test("documents opened with the app externally arrive in the editor", async ({ page }) => {
+  const file = join(docs, "opened-with.md");
+  writeFileSync(file, "# opened externally\n", "utf8");
+  await openApp(page);
+  await resetSettings(page);
+
+  // Simulate what macOS "Open With"/Dock-drop does: the Go layer queues the
+  // path; after the UI signals readiness it is delivered as open:paths.
+  await page.evaluate(async (p) => {
+    await fetch("/api/QueueExternalOpen", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ args: [[p]] }),
+    });
+  }, file);
+  const name = file.split("/").pop() || file;
+  await expect(page.locator(".tab.active")).toContainText(name, { timeout: 8000 });
+  await expect(page.locator(".cm-content")).toContainText("opened externally");
+
+  // Queue before UI-ready flushes on startup (argv/Open-With during launch).
+  await page.reload();
+  await page.waitForTimeout(300); // let the fresh app boot to its Untitled tab
+  await page.evaluate(async (p) => {
+    await fetch("/api/QueueExternalOpen", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ args: [[p]] }),
+    });
+    // The app already marked itself ready in start(); queued paths flush live.
+  }, file);
+  await expect(page.locator(".tab.active")).toContainText(name, { timeout: 8000 });
+});

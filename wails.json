@@ -13,6 +13,236 @@
     "productName": "Xtracsys Editor",
     "productVersion": "0.1.0",
     "copyright": "Copyright 2026 Xtracsys",
-    "comments": "A local-first text and Markdown editor"
+    "comments": "A local-first text and Markdown editor",
+    "fileAssociations": [
+      {
+        "ext": "md",
+        "name": "Markdown document",
+        "role": "Editor",
+        "iconName": "iconfile"
+      },
+      {
+        "ext": "markdown",
+        "name": "Markdown document",
+        "role": "Editor",
+        "iconName": "iconfile"
+      },
+      {
+        "ext": "mkd",
+        "name": "Markdown document",
+        "role": "Editor",
+        "iconName": "iconfile"
+      },
+      {
+        "ext": "txt",
+        "name": "Text document",
+        "role": "Editor",
+        "iconName": "iconfile"
+      },
+      {
+        "ext": "text",
+        "name": "Text document",
+        "role": "Editor",
+        "iconName": "iconfile"
+      },
+      {
+        "ext": "log",
+        "name": "Log file",
+        "role": "Editor",
+        "iconName": "iconfile"
+      },
+      {
+        "ext": "json",
+        "name": "JSON document",
+        "role": "Editor",
+        "iconName": "iconfile"
+      },
+      {
+        "ext": "yaml",
+        "name": "YAML document",
+        "role": "Editor",
+        "iconName": "iconfile"
+      },
+      {
+        "ext": "yml",
+        "name": "YAML document",
+        "role": "Editor",
+        "iconName": "iconfile"
+      },
+      {
+        "ext": "toml",
+        "name": "TOML document",
+        "role": "Editor",
+        "iconName": "iconfile"
+      },
+      {
+        "ext": "ini",
+        "name": "Configuration file",
+        "role": "Editor",
+        "iconName": "iconfile"
+      },
+      {
+        "ext": "cfg",
+        "name": "Configuration file",
+        "role": "Editor",
+        "iconName": "iconfile"
+      },
+      {
+        "ext": "conf",
+        "name": "Configuration file",
+        "role": "Editor",
+        "iconName": "iconfile"
+      },
+      {
+        "ext": "csv",
+        "name": "CSV document",
+        "role": "Editor",
+        "iconName": "iconfile"
+      },
+      {
+        "ext": "xml",
+        "name": "XML document",
+        "role": "Editor",
+        "iconName": "iconfile"
+      },
+      {
+        "ext": "html",
+        "name": "HTML document",
+        "role": "Editor",
+        "iconName": "iconfile"
+      },
+      {
+        "ext": "css",
+        "name": "CSS stylesheet",
+        "role": "Editor",
+        "iconName": "iconfile"
+      },
+      {
+        "ext": "js",
+        "name": "JavaScript source",
+        "role": "Editor",
+        "iconName": "iconfile"
+      },
+      {
+        "ext": "ts",
+        "name": "TypeScript source",
+        "role": "Editor",
+        "iconName": "iconfile"
+      },
+      {
+        "ext": "go",
+        "name": "Go source",
+        "role": "Editor",
+        "iconName": "iconfile"
+      },
+      {
+        "ext": "py",
+        "name": "Python source",
+        "role": "Editor",
+        "iconName": "iconfile"
+      },
+      {
+        "ext": "rb",
+        "name": "Ruby source",
+        "role": "Editor",
+        "iconName": "iconfile"
+      },
+      {
+        "ext": "rs",
+        "name": "Rust source",
+        "role": "Editor",
+        "iconName": "iconfile"
+      },
+      {
+        "ext": "c",
+        "name": "C source",
+        "role": "Editor",
+        "iconName": "iconfile"
+      },
+      {
+        "ext": "h",
+        "name": "C header",
+        "role": "Editor",
+        "iconName": "iconfile"
+      },
+      {
+        "ext": "cpp",
+        "name": "C++ source",
+        "role": "Editor",
+        "iconName": "iconfile"
+      },
+      {
+        "ext": "java",
+        "name": "Java source",
+        "role": "Editor",
+        "iconName": "iconfile"
+      },
+      {
+        "ext": "sh",
+        "name": "Shell script",
+        "role": "Editor",
+        "iconName": "iconfile"
+      },
+      {
+        "ext": "bash",
+        "name": "Shell script",
+        "role": "Editor",
+        "iconName": "iconfile"
+      },
+      {
+        "ext": "zsh",
+        "name": "Shell script",
+        "role": "Editor",
+        "iconName": "iconfile"
+      },
+      {
+        "ext": "sql",
+        "name": "SQL source",
+        "role": "Editor",
+        "iconName": "iconfile"
+      },
+      {
+        "ext": "swift",
+        "name": "Swift source",
+        "role": "Editor",
+        "iconName": "iconfile"
+      },
+      {
+        "ext": "kt",
+        "name": "Kotlin source",
+        "role": "Editor",
+        "iconName": "iconfile"
+      },
+      {
+        "ext": "php",
+        "name": "PHP source",
+        "role": "Editor",
+        "iconName": "iconfile"
+      },
+      {
+        "ext": "lua",
+        "name": "Lua source",
+        "role": "Editor",
+        "iconName": "iconfile"
+      },
+      {
+        "ext": "env",
+        "name": "Environment file",
+        "role": "Editor",
+        "iconName": "iconfile"
+      },
+      {
+        "ext": "gitignore",
+        "name": "Git ignore file",
+        "role": "Editor",
+        "iconName": "iconfile"
+      },
+      {
+        "ext": "properties",
+        "name": "Properties file",
+        "role": "Editor",
+        "iconName": "iconfile"
+      }
+    ]
   }
 }

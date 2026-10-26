@@ -107,6 +107,9 @@ export class Application {
     this.bindShortcuts();
     await this.newTab();
     await this.offerRecovery();
+    // External opens (Open With, argv, drag-drop) may queue before the UI is
+    // up; from here they are delivered live and any backlog flushes.
+    await this.backend.markExternalReady();
   }
 
   // ------------------------------------------------------------------
@@ -608,6 +611,9 @@ export class Application {
     this.backend.onWatchEvent((e) => void this.onWatch(e));
     this.backend.onMenuAction((a) => void this.onMenu(a));
     this.backend.onQuitRequest(() => void this.onQuitRequest());
+    this.backend.onOpenPaths((paths) => {
+      if (paths.length) void this.openPaths(paths);
+    });
   }
 
   private async onWatch(e: WatchEvent) {

@@ -11,8 +11,10 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"path/filepath"
 	goruntime "runtime"
 	"sync"
+	"strings"
 	"time"
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
@@ -30,6 +32,7 @@ const (
 	EventWatch       = "watch:event"
 	EventMenuAction  = "menu:action"
 	EventQuitRequest = "app:quit-requested"
+	EventOpenPaths   = "open:paths"
 )
 
 // ErrHeadlessDialog is returned when a native dialog is requested while
@@ -96,6 +99,12 @@ type App struct {
 	// headless marks the E2E bridge mode: no webview, no native dialogs.
 	headless bool
 
+	// external opens (Open With, argv, drag-drop) queue until the frontend
+	// signals it can receive open:paths events, then flush in order.
+	extMu      sync.Mutex
+	extReady   bool
+	extPending []string
+
 	// quitting lets the second phase of the quit-guard close the window.
 	quitting bool
 }
@@ -153,6 +162,9 @@ func (a *App) Startup(ctx context.Context) {
 	}
 	a.watcher = fileio.NewWatcher(func(ev fileio.WatchEvent) {
 		a.emitEvent(EventWatch, ev)
+	})
+	runtime.OnFileDrop(ctx, func(x, y int, paths []string) {
+		a.QueueExternalOpen(paths)
 	})
 	go a.watcher.Run(ctx)
 }
@@ -351,6 +363,72 @@ func (a *App) CloseTab(tabId string) {
 	a.mu.Unlock()
 	if a.watcher != nil {
 		a.watcher.Remove(tabId)
+	}
+}
+
+// QueueExternalOpen schedules documents that reached the app from outside the
+// UI: macOS "Open With"/Dock-drop Apple Events, files passed on the command
+// line, drag-and-drop onto the window, and second-instance launches. Paths
+// queue until the frontend is ready, then arrive through one open:paths event
+// and flow through the same open pipeline as the in-app Open dialog.
+func (a *App) QueueExternalOpen(paths []string) {
+	clean := make([]string, 0, len(paths))
+	for _, p := range paths {
+		p = strings.TrimSpace(p)
+		if p == "" || strings.HasPrefix(p, "-") {
+			continue
+		}
+		clean = append(clean, p)
+	}
+	if len(clean) == 0 {
+		return
+	}
+	a.debugLog("QueueExternalOpen", clean)
+	a.extMu.Lock()
+	if !a.extReady {
+		a.extPending = append(a.extPending, clean...)
+		a.extMu.Unlock()
+		return
+	}
+	a.extMu.Unlock()
+	a.emitEvent(EventOpenPaths, clean)
+}
+
+// debugLog appends diagnostics when XTRACSYS_EDITOR_DEBUG=1 (set via
+// `launchctl setenv` to inspect GUI-launched instances). Opt-in, app-data
+// only, never enabled by default.
+func (a *App) debugLog(what string, detail interface{}) {
+	if os.Getenv("XTRACSYS_EDITOR_DEBUG") != "1" {
+		return
+	}
+	dir, err := settings.Dir()
+	if err != nil {
+		return
+	}
+	f, err := os.OpenFile(filepath.Join(dir, "debug.log"),
+		os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o600)
+	if err != nil {
+		return
+	}
+	defer f.Close()
+	fmt.Fprintf(f, "%s %s %v\n", time.Now().Format(time.RFC3339), what, detail)
+}
+
+// QueueExternalOpenOne adapts single-path callbacks (macOS OnFileOpen).
+func (a *App) QueueExternalOpenOne(path string) {
+	a.QueueExternalOpen([]string{path})
+}
+
+// MarkExternalReady tells the app the frontend listens for open:paths and
+// flushes anything queued before that.
+func (a *App) MarkExternalReady() {
+	a.extMu.Lock()
+	pending := a.extPending
+	a.extPending = nil
+	a.extReady = true
+	a.extMu.Unlock()
+	if len(pending) > 0 {
+		a.emitEvent(EventOpenPaths, pending)
 	}
 }
 

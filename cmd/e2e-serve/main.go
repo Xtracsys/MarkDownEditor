@@ -269,6 +269,16 @@ func dispatch(a *app.App, method string, args []json.RawMessage) (interface{}, e
 			return nil, err
 		}
 		return a.RecoverEntry(id), nil
+	case "QueueExternalOpen":
+		var paths []string
+		if err := dec(0, &paths); err != nil {
+			return nil, err
+		}
+		a.QueueExternalOpen(paths)
+		return nil, nil
+	case "MarkExternalReady":
+		a.MarkExternalReady()
+		return nil, nil
 	case "_EmitMenuAction": // test hook: simulate a native menu click
 		var action string
 		if err := dec(0, &action); err != nil {

@@ -116,6 +116,15 @@ export interface Backend {
   onWatchEvent(cb: (e: WatchEvent) => void): void;
   onMenuAction(cb: (action: string) => void): void;
   onQuitRequest(cb: () => void): void;
+  onOpenPaths(cb: (paths: string[]) => void): void;
+  markExternalReady(): Promise<void>;
+}
+
+/** Filter launch/second-instance arguments down to document paths. */
+export function fileArgs(args: string[]): string[] {
+  return args
+    .map((a) => a.trim())
+    .filter((a) => a !== "" && !a.startsWith("-"));
 }
 
 /** Wails injects window.go bindings and window.runtime when running as an app. */
@@ -151,12 +160,14 @@ export function createBackend(): Backend {
   const evWatch: ((e: WatchEvent) => void)[] = [];
   const evMenu: ((a: string) => void)[] = [];
   const evQuit: (() => void)[] = [];
+  const evOpen: ((p: string[]) => void)[] = [];
   const wire = () => {
     const rt = wails().runtime;
     if (!rt) return;
     rt.EventsOn("watch:event", (d) => evWatch.forEach((f) => f(d as WatchEvent)));
     rt.EventsOn("menu:action", (d) => evMenu.forEach((f) => f(String(d))));
     rt.EventsOn("app:quit-requested", () => evQuit.forEach((f) => f()));
+    rt.EventsOn("open:paths", (d) => evOpen.forEach((f) => f((d as string[]) || [])));
   };
   // EventsOn may be injected slightly after first paint; retry lazily.
   const tryWire = setInterval(() => {
@@ -192,6 +203,8 @@ export function createBackend(): Backend {
     onWatchEvent: (cb) => evWatch.push(cb),
     onMenuAction: (cb) => evMenu.push(cb),
     onQuitRequest: (cb) => evQuit.push(cb),
+    onOpenPaths: (cb) => evOpen.push(cb),
+    markExternalReady: () => call<void>("MarkExternalReady"),
   };
 }
 
@@ -208,6 +221,7 @@ function createBridgeBackend(): Backend {
   const watch: ((e: WatchEvent) => void)[] = [];
   const menu: ((a: string) => void)[] = [];
   const quit: (() => void)[] = [];
+  const open: ((p: string[]) => void)[] = [];
 
   const call = async (method: string, ...args: unknown[]): Promise<any> => {
     const res = await fetch(`/api/${method}`, {
@@ -231,6 +245,10 @@ function createBridgeBackend(): Backend {
     menu.forEach((f) => f(String(payload.data)));
   });
   es.addEventListener("app:quit-requested", () => quit.forEach((f) => f()));
+  es.addEventListener("open:paths", (ev) => {
+    const payload = JSON.parse((ev as MessageEvent).data);
+    open.forEach((f) => f((payload.data as string[]) || []));
+  });
 
   return {
     appInfo: () => call("AppInfo"),
@@ -257,5 +275,7 @@ function createBridgeBackend(): Backend {
     onWatchEvent: (cb) => watch.push(cb),
     onMenuAction: (cb) => menu.push(cb),
     onQuitRequest: (cb) => quit.push(cb),
+    onOpenPaths: (cb) => open.push(cb),
+    markExternalReady: () => call("MarkExternalReady"),
   };
 }
