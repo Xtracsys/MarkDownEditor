@@ -99,6 +99,12 @@ metadata folders, no backups — is ever written next to your documents.
 Prebuilt packages are not published yet. Until the first release, build from
 source (below) — it takes one command on each platform.
 
+**Installing the macOS DMG:** open the image and drag Xtracsys Editor into
+the Applications folder next to it, then eject the disk and launch from
+Applications. Because the build is ad-hoc signed (no Apple Developer
+certificate yet), Gatekeeper asks on first launch: right-click the app in
+Applications and choose **Open** once; afterwards it launches normally.
+
 ## Build from source
 
 Prerequisites: [Go 1.24+](https://go.dev/dl/), Node.js 18+, and:

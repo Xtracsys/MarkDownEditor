@@ -120,7 +120,7 @@ jobs:
         run: |
           xattr -cr build/bin || true
           codesign --force --sign - build/bin/xtracsys-editor.app || true
-          hdiutil create -volname "Xtracsys Editor" -srcfolder build/bin/xtracsys-editor.app -ov -format UDZO build/bin/xtracsys-editor-macos-universal.dmg
+          scripts/make-dmg.sh build/bin/xtracsys-editor.app build/bin/xtracsys-editor-macos-universal.dmg
 
       - name: Package installers (Windows NSIS)
         if: runner.os == 'Windows'
