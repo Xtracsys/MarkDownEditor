@@ -52,6 +52,10 @@ that build. Last updated: 2026-10-24 (v0.1.0 development).
 Run once per platform before calling it verified:
 
 1. Launch; window appears with the brand light or dark theme (system).
+1a. macOS: Finder → Open With → Xtracsys Editor, and dragging a file onto the
+    Dock icon — the document opens in a tab. **Verified on this machine** via
+    real Apple Events (launch-with-file and open-while-running both delivered;
+    the queue-while-starting path is covered by unit + E2E tests).
 2. ⌘/Ctrl+O opens any file — including a dotfile, an extensionless file, and
    a file with an unknown extension.
 3. Type, undo/redo, find & replace (⌘/Ctrl+F), word-wrap toggle (Alt+Z).

@@ -48,6 +48,9 @@ Every editing feature is built around file integrity:
   shebang detection), bracket matching, code folding
 - Undo/redo, find & replace (panel: `⌘/Ctrl+F`), multiple selections
 - Indentation controls (tab width, spaces/tabs) and word-wrap toggle
+- **Open With support** — open documents from the Finder ("Open With",
+  dragging onto the Dock icon), from the command line, or by dragging files
+  onto the editor window; multiple files arrive in order as separate tabs
 - Status bar: full path, encoding, line-ending style, language, cursor position
 - Standard shortcuts (`⌘/Ctrl+N/O/S/W`, `⌘⇧S`, `⌘/Ctrl+,` …) — see
   Help → Keyboard Shortcuts
