@@ -104,6 +104,22 @@ corrupting beyond a new boundary. Low-severity fixes applied:
 - Plus defense-in-depth: `..` segments filtered client-side before the image
   handler, and `CSS.escape` on banner selectors.
 
+## Follow-up (post-audit hardening, same release)
+
+- **Removed the document-level CSP meta** from `index.html`: WebKit does not
+  reliably match `script-src 'self'` on the `wails://` custom scheme, which
+  silently stripped the injected Wails runtime. All page assets are embedded
+  and local; the untrusted-content boundary is the preview iframe, which
+  keeps its own strict CSP (`default-src 'none'`, no scripts).
+- **Fixed a production-only failure** where frontend→backend bindings were
+  unreachable after the App service moved packages (the generated bindings
+  namespace follows the Go package, so `window.go.main.App` became
+  `window.go.app.App`). The frontend now resolves the bound service
+  structurally instead of hard-coding the namespace, and a broken backend
+  renders an explicit full-window error instead of a half-initialized UI.
+  Document opens, settings, and the recovery flow are verified end-to-end in
+  the real macOS app via opt-in diagnostics (XTRACSYS_EDITOR_DEBUG=1).
+
 ## Residual risks (stated plainly)
 
 1. The check→rename race narrowed to one read (F4) cannot be fully closed

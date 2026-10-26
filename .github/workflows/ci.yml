@@ -58,6 +58,15 @@ jobs:
         working-directory: frontend
         run: npm run build
 
+      - name: Fail on file-provider conflict copies in embedded assets
+        if: runner.os == 'macOS'
+        run: |
+          if find frontend/dist -name "* 2.*" -o -name "* 3.*" | grep -q .; then
+            echo "::error::iCloud conflict copies found in frontend/dist — clean and rebuild"
+            find frontend/dist -name "* 2.*" -o -name "* 3.*"
+            exit 1
+          fi
+
       - name: Install Playwright Chromium
         run: npx playwright install chromium --with-deps
 

@@ -93,7 +93,10 @@ export class Application {
   async start() {
     initTheme();
     onThemeChange(() => this.applyThemeToEditor());
-    this.settings = await this.backend.getSettings().catch(() => defaultSettings());
+    this.settings = await this.backend.getSettings().catch((e) => {
+      this.showFatalStartupError(String(e));
+      return defaultSettings();
+    });
     setTheme(this.settings.theme as ThemeMode);
     this.preview.setBlockRemote(this.settings.blockRemoteResources);
 
@@ -102,14 +105,38 @@ export class Application {
       state: EditorState.create({ doc: "", extensions: [] }),
     });
 
-    this.wireDom();
-    this.wireBackendEvents();
-    this.bindShortcuts();
-    await this.newTab();
-    await this.offerRecovery();
-    // External opens (Open With, argv, drag-drop) may queue before the UI is
-    // up; from here they are delivered live and any backlog flushes.
-    await this.backend.markExternalReady();
+    try {
+      this.wireDom();
+      this.wireBackendEvents();
+      this.bindShortcuts();
+      await this.newTab();
+      // External opens (Open With, argv, drag-drop) may queue before the UI
+      // is up; from here they are delivered live and any backlog flushes.
+      // This MUST come before offerRecovery: the recovery modal is
+      // interactive and must never gate document delivery.
+      await this.backend.markExternalReady();
+      await this.offerRecovery();
+    } catch (e) {
+      this.showFatalStartupError(String(e));
+      return;
+    }
+  }
+
+  /** Full-window error instead of a half-initialized UI when the backend
+   * bindings never arrive (build/packaging problem, not user error). */
+  private showFatalStartupError(detail: string) {
+    const el = document.getElementById("empty")!;
+    el.classList.remove("hidden");
+    el.innerHTML = "";
+    const box = document.createElement("div");
+    box.className = "empty-title";
+    box.style.maxWidth = "520px";
+    box.style.textAlign = "center";
+    box.textContent =
+      "The editor could not reach its backend. This build is broken — please reinstall. (" +
+      detail + ")";
+    el.appendChild(box);
+    console.error("backend unavailable:", detail);
   }
 
   // ------------------------------------------------------------------

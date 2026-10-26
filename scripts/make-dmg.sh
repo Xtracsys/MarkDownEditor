@@ -17,7 +17,7 @@ VOLNAME="Xtracsys Editor"
 REPO="$(cd "$(dirname "$0")/.." && pwd)"
 
 STAGE="$(mktemp -d)"
-TMP_DMG="$(mktemp -u).dmg"
+TMP_DMG="$(mktemp -u).$RANDOM.dmg"
 trap 'rm -rf "$STAGE" "$TMP_DMG"' EXIT
 
 cp -R "$APP_PATH" "$STAGE/"

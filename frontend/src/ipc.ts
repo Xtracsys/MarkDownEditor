@@ -143,8 +143,24 @@ function wails(): WailsGlobal {
   return window as unknown as WailsGlobal;
 }
 
+// The bound App lives at window.go.<package>.App — the package part changed
+// when App moved from main to internal/app, so resolve it structurally instead
+// of hard-coding the namespace.
+function appBinding(): Record<string, (...args: unknown[]) => Promise<unknown>> | undefined {
+  const go = wails().go as
+    | Record<string, Record<string, Record<string, (...args: unknown[]) => Promise<unknown>>>>
+    | undefined;
+  if (!go) return undefined;
+  for (const pkg of Object.values(go)) {
+    for (const struct of Object.values(pkg)) {
+      if (struct && typeof struct.NewTab === "function") return struct;
+    }
+  }
+  return undefined;
+}
+
 function call<T>(method: string, ...args: unknown[]): Promise<T> {
-  const fn = wails().go?.main?.App?.[method];
+  const fn = appBinding()?.[method];
   if (!fn) {
     return Promise.reject(new Error(`backend method unavailable: ${method}`));
   }

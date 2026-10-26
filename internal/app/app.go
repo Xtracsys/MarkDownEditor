@@ -154,11 +154,7 @@ func (a *App) Startup(ctx context.Context) {
 	a.ctx = ctx
 	a.settings, _ = settings.Load()
 	if dir, err := settings.Dir(); err == nil {
-		st, serr := recovery.New(dir)
-		a.recov = st
-		fmt.Printf("DBG recovery.New dir=%q err=%v storeErr=%v\n", dir, err, serr)
-	} else {
-		fmt.Printf("DBG settings.Dir err=%v\n", err)
+		a.recov, _ = recovery.New(dir)
 	}
 	a.watcher = fileio.NewWatcher(func(ev fileio.WatchEvent) {
 		a.emitEvent(EventWatch, ev)
@@ -166,6 +162,15 @@ func (a *App) Startup(ctx context.Context) {
 	runtime.OnFileDrop(ctx, func(x, y int, paths []string) {
 		a.QueueExternalOpen(paths)
 	})
+	if os.Getenv("XTRACSYS_EDITOR_DEBUG") == "1" {
+		// Diagnostics only: after 6s, emit a synthetic external open so the
+		// Go->JS event loop can be verified end to end without Apple Events.
+		go func() {
+			time.Sleep(6 * time.Second)
+			a.debugLog("EmittingTestOpen", nil)
+			a.emitEvent(EventOpenPaths, []string{"/tmp/verify-open.md"})
+		}()
+	}
 	go a.watcher.Run(ctx)
 }
 
@@ -247,6 +252,7 @@ func (a *App) NewTab() *TabInfo {
 
 // OpenPaths loads files by absolute path (open-with, drag-drop, E2E).
 func (a *App) OpenPaths(paths []string) []OpenOutcome {
+	a.debugLog("OpenPaths", paths)
 	out := make([]OpenOutcome, 0, len(paths))
 	for _, p := range paths {
 		out = append(out, a.openOne(p, false))
@@ -547,6 +553,7 @@ func (a *App) SetWindowTitle(title string) {
 
 // GetSettings returns effective settings, creating defaults on fresh install.
 func (a *App) GetSettings() (settings.Settings, error) {
+	a.debugLog("GetSettings", nil)
 	s, err := settings.Load()
 	if err == nil {
 		a.mu.Lock()
