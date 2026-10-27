@@ -24,8 +24,13 @@ import (
 	"github.com/xtracsys/xtracsys-editor/internal/settings"
 )
 
-// AppVersion is stamped at build time via -ldflags.
-var AppVersion = "0.1.0"
+// AppVersion and BuildStamp are written to buildstamp_gen.go by
+// scripts/build-all.sh before compiling. ( -ldflags -X proved unreliable
+// under the build cache in this setup, so the stamp is a source literal. )
+var (
+	AppVersion = GeneratedAppVersion
+	BuildStamp = GeneratedBuildStamp
+)
 
 // Event names emitted to the frontend.
 const (
@@ -151,6 +156,7 @@ func (a *App) emitEvent(name string, data interface{}) {
 
 // Startup is the wails OnStartup hook: capture ctx, load settings, start watching.
 func (a *App) Startup(ctx context.Context) {
+	a.debugLog("Startup", AppVersion+"/"+BuildStamp)
 	a.ctx = ctx
 	a.settings, _ = settings.Load()
 	if dir, err := settings.Dir(); err == nil {
@@ -236,6 +242,7 @@ func (a *App) AppInfo() map[string]string {
 	return map[string]string{
 		"name":     "Xtracsys Editor",
 		"version":  AppVersion,
+		"build":    BuildStamp,
 		"platform": goruntime.GOOS,
 		"arch":     goruntime.GOARCH,
 	}

@@ -77,6 +77,7 @@ export interface RecoveryEntry {
 export interface AppInfo {
   name: string;
   version: string;
+  build?: string;
   platform: string;
   arch: string;
 }

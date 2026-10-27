@@ -90,9 +90,15 @@ export class Application {
     });
   }
 
+  private appVersion = "";
+
   async start() {
     initTheme();
     onThemeChange(() => this.applyThemeToEditor());
+    this.appVersion = await this.backend
+      .appInfo()
+      .then((i) => i.version || "")
+      .catch(() => "");
     this.settings = await this.backend.getSettings().catch((e) => {
       this.showFatalStartupError(String(e));
       return defaultSettings();
@@ -439,9 +445,8 @@ export class Application {
 
   private refreshWindowTitle() {
     const tab = this.active;
-    const title = tab
-      ? `${tab.dirty ? "● " : ""}${tab.fileName()} — Xtracsys Editor`
-      : "Xtracsys Editor";
+    const app = `Xtracsys Editor${this.appVersion ? " " + this.appVersion : ""}`;
+    const title = tab ? `${tab.dirty ? "● " : ""}${tab.fileName()} — ${app}` : app;
     void this.backend.setWindowTitle(title);
   }
 

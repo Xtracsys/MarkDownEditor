@@ -7,7 +7,9 @@
 ; The application executable must already be built into build/bin/.
 
 !define APPNAME "Xtracsys Editor"
-!define VERSION "0.1.0"
+!ifndef VERSION
+  !define VERSION "0.1.1"
+!endif
 !define PUBLISHER "Xtracsys"
 !define EXENAME "xtracsys-editor.exe"
 
