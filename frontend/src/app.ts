@@ -10,9 +10,12 @@ import { EditorState } from "@codemirror/state";
 import { EditorView, keymap } from "@codemirror/view";
 
 import type { Backend, Eol, OpenOutcome, TabInfo, AppSettings, WatchEvent } from "./ipc";
-import { eolField, equalsSaved } from "./eol";
+import { eolField, equalsSaved, setEolsEffect, DEFAULT_EOL } from "./eol";
 import { makeState, settingsEffects, isMarkdownPath, reconfigureLanguage } from "./editor";
 import { PreviewPane } from "./preview";
+import { parseOutline } from "./outline";
+import { copyText, revealLabel } from "./util";
+import { imageNameDialog } from "./settingsui";
 import { showModal, toast, unsavedPrompt, quitPrompt, showBanner, removeBanner } from "./ui";
 import { initTheme, setTheme, effective, onThemeChange, type ThemeMode } from "./theme";
 
@@ -20,6 +23,7 @@ export type ViewMode = "source" | "split" | "preview";
 
 class Tab {
   dirtyRecheck: number | undefined;
+  encodingDirty = false;
   info: TabInfo;
   state: EditorState;
   dirty = false;
@@ -112,6 +116,7 @@ export class Application {
       parent: this.editorHost,
       state: EditorState.create({ doc: "", extensions: [] }),
     });
+    this.view.dom.addEventListener("paste", (e) => this.handlePaste(e as ClipboardEvent));
 
     try {
       this.wireDom();
@@ -131,7 +136,21 @@ export class Application {
           toast("Could not open queued documents", String(e));
         }
       }
-      await this.offerRecovery();
+      // The recovery offer must not gate startup or session restore: it is a
+      // modal the user answers while the editor is already usable.
+      void this.offerRecovery();
+      if (this.settings.restoreSession) {
+        try {
+          const last = await this.backend.getLastSession();
+          const known = new Set(this.tabs.map((t) => t.info.path));
+          const missing = last.filter((p) => p && !known.has(p));
+          // Never block the launch with per-file modals: unreadable session
+          // entries are skipped and summarized in one toast.
+          if (missing.length) await this.openPaths(missing, { silentFailures: true });
+        } catch {
+          // session restore is best-effort
+        }
+      }
     } catch (e) {
       this.showFatalStartupError(String(e));
       return;
@@ -179,15 +198,16 @@ export class Application {
     await this.openOutcomes(outcomes);
   }
 
-  async openPaths(paths: string[]) {
+  async openPaths(paths: string[], opts: { silentFailures?: boolean } = {}) {
     if (!paths.length) return;
     const outcomes = await this.backend.openPaths(paths);
-    await this.openOutcomes(outcomes, paths);
+    await this.openOutcomes(outcomes, paths, opts);
   }
 
-  private async openOutcomes(outcomes: OpenOutcome[], paths?: string[]) {
+  private async openOutcomes(outcomes: OpenOutcome[], paths?: string[], opts: { silentFailures?: boolean } = {}) {
     let firstTab: Tab | null = null;
     let issues = 0;
+    const skipped: string[] = [];
     for (let i = 0; i < outcomes.length; i++) {
       const oc = outcomes[i];
       if (oc.tab) {
@@ -205,9 +225,16 @@ export class Application {
         if (!firstTab) firstTab = tab;
       } else if (oc.issue) {
         issues++;
+        if (opts.silentFailures) {
+          skipped.push((paths && paths[i] ? paths[i] : "file") + " — " + oc.issue.message);
+          continue;
+        }
         this.lastIssuePath = paths && paths[i] ? paths[i] : this.lastIssuePath;
         await this.showOpenIssue(oc.issue.message, oc.issue.detail || "", oc.issue.hexPreview || "", oc.issue.canReadOnly);
       }
+    }
+    if (skipped.length) {
+      toast("Some files could not be opened", skipped.join("\n"), 8000);
     }
     if (firstTab) {
       // Replace the initial empty untitled tab if it is untouched.
@@ -281,6 +308,7 @@ export class Application {
         this.refreshLayout();
         this.empty.classList.remove("hidden");
         await this.backend.setWindowTitle("Xtracsys Editor");
+        void this.renderEmptyRecents();
       }
     } else {
       this.renderTabs();
@@ -349,6 +377,7 @@ export class Application {
     );
     if (resp.ok) {
       tab.dirty = false;
+      tab.encodingDirty = false;
       tab.savedContent = content;
       tab.savedEols = eols;
       tab.extState = "none";
@@ -512,11 +541,14 @@ export class Application {
       this.tabbar.insertBefore(el, controls || null);
     }
     (document.getElementById("btn-save") as HTMLButtonElement).disabled = !this.active || this.active.info.readOnly;
+
     const md = !!this.active?.markdown;
     for (const b of ["btn-mode-source", "btn-mode-split", "btn-mode-preview"]) {
       const el = document.getElementById(b) as HTMLButtonElement;
       el.disabled = !md;
     }
+    (document.getElementById("btn-outline") as HTMLButtonElement).disabled = !md;
+    (document.getElementById("btn-print") as HTMLButtonElement).disabled = !this.active;
     document.getElementById("btn-mode-source")!.classList.toggle("active", this.mode === "source");
     document.getElementById("btn-mode-split")!.classList.toggle("active", this.mode === "split");
     document.getElementById("btn-mode-preview")!.classList.toggle("active", this.mode === "preview");
@@ -546,7 +578,8 @@ export class Application {
   }
 
   private refreshLayout() {
-    this.main.className = this.mode === "split" ? "split" : this.mode === "preview" ? "preview-only" : "";
+    const base = this.mode === "split" ? "split" : this.mode === "preview" ? "preview-only" : "";
+    this.main.className = base + (this.outlineVisible && this.active?.markdown ? " with-outline" : "");
     if (this.mode === "split") {
       const wrap = document.getElementById("editor-wrap")!;
       wrap.style.flex = `${this.splitRatio} 1 0`;
@@ -652,14 +685,14 @@ export class Application {
     return this.settings;
   }
 
-  updateSettings(next: AppSettings) {
+  async updateSettings(next: AppSettings) {
     const themeChanged = next.theme !== this.settings.theme;
     this.settings = next;
     if (themeChanged) setTheme(next.theme as ThemeMode);
     this.preview.setBlockRemote(next.blockRemoteResources);
     this.applySettingsToAllTabs();
     this.refreshPreview(true);
-    void this.persistSettings();
+    await this.persistSettings();
   }
 
   // ------------------------------------------------------------------
@@ -713,6 +746,11 @@ export class Application {
   }
 
   private async onMenu(action: string) {
+    if (action.startsWith("open-recent\u001f")) {
+      const p = action.slice("open-recent\u001f".length);
+      if (p) await this.openPaths([p]);
+      return;
+    }
     switch (action) {
       case "new-tab": return this.newTab();
       case "open": return this.openPathsWithDialog();
@@ -730,6 +768,12 @@ export class Application {
       case "settings": return this.openSettings();
       case "about": return this.showAbout();
       case "help-shortcuts": return this.showShortcuts();
+      case "convert-utf8": return this.convertToUTF8();
+      case "normalize-eol": return this.normalizeLineEndings();
+      case "toggle-outline": return this.toggleOutline();
+      case "print": return this.printPreview();
+      case "clear-recent": return this.clearRecent();
+      case "open-recent\u001f": return undefined; // handled by prefix below
     }
   }
 
@@ -806,6 +850,7 @@ export class Application {
           }
           this.scheduleDirtyRecheck(tab);
           this.refreshPreview();
+          this.scheduleOutline();
           this.resetAutosaveTimer();
           this.scheduleSnapshot();
         }
@@ -825,6 +870,7 @@ export class Application {
       else if (mod && !inField && e.key.toLowerCase() === "n") { e.preventDefault(); void this.newTab(); }
       else if (mod && !inField && e.key.toLowerCase() === "w") { e.preventDefault(); void this.closeActiveTab(); }
       else if (mod && e.key === ",") { e.preventDefault(); void this.openSettings(); }
+      else if (mod && e.key.toLowerCase() === "p") { e.preventDefault(); this.printPreview(); }
       else if (mod && !inField && e.key.toLowerCase() === "q") { e.preventDefault(); void this.onQuitRequest(); }
       else if (e.altKey && !mod) {
         if (e.key === "1") { e.preventDefault(); this.setMode("source"); }
@@ -850,11 +896,14 @@ export class Application {
       void this.persistSettings();
       this.applyThemeToEditor();
     });
+    document.getElementById("btn-outline")!.addEventListener("click", () => this.toggleOutline());
+    document.getElementById("btn-print")!.addEventListener("click", () => this.printPreview());
     document.getElementById("btn-mode-source")!.addEventListener("click", () => this.setMode("source"));
     document.getElementById("btn-mode-split")!.addEventListener("click", () => this.setMode("split"));
     document.getElementById("btn-mode-preview")!.addEventListener("click", () => this.setMode("preview"));
     document.getElementById("empty-new")!.addEventListener("click", () => void this.newTab());
     document.getElementById("empty-open")!.addEventListener("click", () => void this.openPathsWithDialog());
+    this.wireTabContextMenu();
 
     // Splitter drag.
     const splitter = document.getElementById("splitter")!;
@@ -889,6 +938,7 @@ export class Application {
     window.clearTimeout(tab.dirtyRecheck);
     tab.dirtyRecheck = window.setTimeout(() => {
       if (!tab.dirty) return;
+      if (tab.encodingDirty) return; // encoding conversion keeps the dirty flag
       const content = tab.state.doc.toString();
       const eols = tab.state.field(eolField);
       if (equalsSaved(content, eols, tab.savedContent, tab.savedEols)) {
@@ -936,6 +986,90 @@ export class Application {
         return;
       }
     }
+  }
+
+  // ------------------------------------------------------------------
+  // Image paste (markdown tabs): clipboard image -> file next to document
+
+  private handlePaste(e: ClipboardEvent) {
+    const tab = this.active;
+    if (!tab || !e.clipboardData) return;
+    const image = Array.from(e.clipboardData.files).find((f) => f.type.startsWith("image/"));
+    if (!image) return;
+    if (!tab.markdown) {
+      toast("Paste image", "Images can be pasted into Markdown documents.");
+      return;
+    }
+    if (!tab.info.path) {
+      toast("Save the document first", "Paste the image after the document has a name and folder (⌘S).");
+      return;
+    }
+    e.preventDefault();
+    const suggested = `pasted-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-")}.png`;
+    void (async () => {
+      const name = await imageNameDialog(suggested);
+      if (name === null) return;
+      const buffer = await image.arrayBuffer();
+      let binary = "";
+      const bytes = new Uint8Array(buffer);
+      for (let i = 0; i < bytes.length; i += 0x8000) {
+        binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+      }
+      try {
+        const finalName = await this.backend.writeImageFile(
+          tab.info.tabId, suggested, btoa(binary),
+        );
+        const sel = tab.state.selection.main;
+        tab.state = tab.state.update({ changes: { from: sel.from, insert: `![${finalName}](${finalName})` } }).state;
+        if (this.active === tab) this.view.setState(tab.state);
+        this.forceDirty(tab);
+        toast("Image saved", `${finalName} written next to the document and referenced.`);
+      } catch (err) {
+        toast("Could not save image", String(err));
+      }
+    })();
+  }
+
+  // ------------------------------------------------------------------
+  // Tab context menu: reveal in file manager, copy path, close
+
+  private wireTabContextMenu() {
+    this.tabbar.addEventListener("contextmenu", (e) => {
+      const target = (e.target as HTMLElement).closest(".tab") as HTMLElement | null;
+      if (!target) return;
+      e.preventDefault();
+      const tabs = this.tabs;
+      const idx = [...this.tabbar.querySelectorAll(".tab")].indexOf(target);
+      const tab = tabs[idx];
+      if (!tab) return;
+      document.getElementById("tab-context")?.remove();
+      const menu = document.createElement("div");
+      menu.id = "tab-context";
+      const item = (label: string, fn: () => void) => {
+        const el = document.createElement("div");
+        el.className = "ctx-item";
+        el.textContent = label;
+        el.addEventListener("click", () => { menu.remove(); fn(); });
+        menu.appendChild(el);
+      };
+      if (tab.info.path) {
+        item(`Reveal in ${revealLabel()}`, () => {
+          void this.backend.revealPath(tab.info.path).then((err) => {
+            if (err) toast("Could not reveal", err);
+          });
+        });
+        item("Copy Path", () => void copyText(tab.info.path).then(() => toast("Path copied")));
+      }
+      menu.querySelector(".ctx-sep") || tab.info.path && menu.appendChild(Object.assign(document.createElement("div"), { className: "ctx-sep" }));
+      item("Close Tab", () => void this.closeTab(tab));
+      document.body.appendChild(menu);
+      const rect = menu.getBoundingClientRect();
+      menu.style.left = `${Math.min(e.clientX, window.innerWidth - rect.width - 8)}px`;
+      menu.style.top = `${Math.min(e.clientY, window.innerHeight - rect.height - 8)}px`;
+      setTimeout(() => {
+        window.addEventListener("mousedown", () => menu.remove(), { once: true });
+      });
+    });
   }
 
   // ------------------------------------------------------------------
@@ -1032,6 +1166,178 @@ export class Application {
     });
   }
 
+  private async clearRecent() {
+    await this.backend.clearRecentFiles();
+    toast("Recent files cleared");
+  }
+
+  // ------------------------------------------------------------------
+  // Convert commands: deliberate, two-step (the save is still yours).
+
+  private async convertToUTF8() {
+    const tab = this.active;
+    if (!tab) return;
+    if (tab.info.encoding === "utf8") {
+      toast("Already UTF-8", "This document is saved as UTF-8 without a BOM.");
+      return;
+    }
+    if (tab.info.readOnly) {
+      toast("Read-only document", "Convert is unavailable; use Save As to export a UTF-8 copy.");
+      return;
+    }
+    const from = ({ utf8bom: "UTF-8 with BOM", utf16le: "UTF-16 LE", utf16be: "UTF-16 BE" } as Record<string, string>)[tab.info.encoding] || tab.info.encoding;
+    const choice = await showModal({
+      title: "Convert to UTF-8",
+      body: `Re-encode “${tab.fileName()}” from ${from} to UTF-8 (no BOM)?\n\nThe document is marked as modified and saved when YOU choose Save — the file on disk is not touched until then.`,
+      buttons: [
+        { label: "Convert", value: "convert", primary: true },
+        { label: "Cancel", value: "cancel" },
+      ],
+      cancelValue: "cancel",
+    });
+    if (choice !== "convert") return;
+    tab.info.encoding = "utf8";
+    tab.encodingDirty = true;
+    this.forceDirty(tab);
+    toast("Converted to UTF-8", "Save (⌘S) to write the converted file.");
+  }
+
+  private async normalizeLineEndings() {
+    const tab = this.active;
+    if (!tab) return;
+    const target = (tab.state.field(eolField)[0] as Eol | undefined) ?? tab.info.defaultEol ?? DEFAULT_EOL;
+    const label = target === "\r\n" ? "CRLF (Windows)" : target === "\r" ? "CR (classic Mac)" : "LF (Unix)";
+    const eols = tab.state.field(eolField);
+    const uniform = eols.every((e) => e === target);
+    if (uniform && eols[eols.length - 1] === "") {
+      toast("Already uniform", `Every line already ends with ${label}.`);
+      return;
+    }
+    const choice = await showModal({
+      title: "Normalize line endings",
+      body: `Rewrite every line ending in “${tab.fileName()}” to ${label}?\n\nThe document is marked as modified and saved when YOU choose Save — the file on disk is not touched until then.`,
+      buttons: [
+        { label: "Normalize", value: "norm", primary: true },
+        { label: "Cancel", value: "cancel" },
+      ],
+      cancelValue: "cancel",
+    });
+    if (choice !== "norm") return;
+    const count = tab.state.doc.lines;
+    tab.state = tab.state.update({ effects: setEolsEffect.of(new Array(count).fill(target)) }).state;
+    if (this.active === tab) this.view.setState(tab.state);
+    // Recompute the display facts locally — the file on disk is unchanged
+    // until the user saves.
+    const summary = target === "\r\n" ? "crlf" : target === "\r" ? "cr" : "lf";
+    tab.info.eolSummary = summary;
+    tab.info.defaultEol = target;
+    this.forceDirty(tab);
+    this.refreshStatus();
+    toast("Normalized", `All ${count} line endings set to ${label}. Save to write the file.`);
+  }
+
+  /** Mark a tab dirty for non-text changes (encoding/EOL conversions). */
+  private forceDirty(tab: Tab) {
+    tab.dirty = true;
+    void this.backend.setDirty(tab.info.tabId, true);
+    this.renderTabs();
+    this.refreshWindowTitle();
+    this.refreshStatus();
+    this.statusbar.classList.add("dirty");
+  }
+
+  // ------------------------------------------------------------------
+  // Outline panel
+
+  private outlineVisible = false;
+  private outlineTimer: number | undefined;
+
+  private scheduleOutline() {
+    if (!this.active?.markdown || !this.outlineVisible) return;
+    window.clearTimeout(this.outlineTimer);
+    this.outlineTimer = window.setTimeout(() => this.renderOutline(), 300);
+  }
+
+  toggleOutline() {
+    this.outlineVisible = !this.outlineVisible;
+    this.refreshLayout();
+    this.renderOutline();
+  }
+
+  private renderOutline() {
+    const host = document.getElementById("outline")!;
+    host.textContent = "";
+    const tab = this.active;
+    const show = this.outlineVisible && tab?.markdown;
+    this.main.classList.toggle("with-outline", !!show);
+    if (!show) return;
+    const headings = parseOutline(tab.state.doc.toString());
+    for (const h of headings) {
+      const el = document.createElement("div");
+      el.className = "outline-item outline-h" + h.level;
+      el.textContent = h.text || "(untitled)";
+      el.title = `Line ${h.line + 1}`;
+      el.addEventListener("click", () => {
+        const line = tab.state.doc.line(h.line + 1);
+        this.view.dispatch({ selection: { anchor: line.from }, scrollIntoView: true });
+        this.view.focus();
+      });
+      host.appendChild(el);
+    }
+    if (!headings.length) {
+      const el = document.createElement("div");
+      el.className = "outline-item";
+      el.textContent = "No headings";
+      host.appendChild(el);
+    }
+  }
+
+  // ------------------------------------------------------------------
+  // Print (preview content)
+
+  private printPreview() {
+    if (this.mode === "source" || !this.active?.markdown) {
+      toast("Printing previews", "Switch to Split or Preview mode to print the rendered document (⌘P).");
+      return;
+    }
+    const frame = document.getElementById("preview-frame") as HTMLIFrameElement | null;
+    try {
+      frame?.contentWindow?.focus();
+      frame?.contentWindow?.print();
+    } catch (e) {
+      toast("Print failed", String(e));
+    }
+  }
+
+  private async renderEmptyRecents() {
+    const host = document.getElementById("empty-recent");
+    if (!host) return;
+    host.textContent = "";
+    let recents: string[] = [];
+    try {
+      recents = (await this.backend.getRecentFiles()).slice(0, 5);
+    } catch {
+      return;
+    }
+    if (!recents.length) {
+      host.style.display = "none";
+      return;
+    }
+    host.style.display = "flex";
+    const title = document.createElement("div");
+    title.className = "er-title";
+    title.textContent = "Recent";
+    host.appendChild(title);
+    for (const p of recents) {
+      const el = document.createElement("div");
+      el.className = "er-item";
+      el.textContent = p;
+      el.title = p;
+      el.addEventListener("click", () => void this.openPaths([p]));
+      host.appendChild(el);
+    }
+  }
+
   private async showShortcuts() {
     await showModal({
       title: "Keyboard shortcuts",
@@ -1059,6 +1365,7 @@ export function shortcutText(): string {
 
 function defaultSettings(): AppSettings {
   return {
+    restoreSession: true,
     theme: "system",
     autoSaveEnabled: false,
     autoSaveDelayMs: 2000,

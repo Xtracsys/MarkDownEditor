@@ -51,6 +51,7 @@ export interface WatchEvent {
 }
 
 export interface AppSettings {
+  restoreSession: boolean;
   theme: string; // system | light | dark
   autoSaveEnabled: boolean;
   autoSaveDelayMs: number;
@@ -114,6 +115,12 @@ export interface Backend {
   listRecovery(): Promise<RecoveryEntry[]>;
   discardRecovery(ids: string[]): Promise<void>;
   recoverEntry(id: string): Promise<OpenOutcome>;
+  getLastSession(): Promise<string[]>;
+  getRecentFiles(): Promise<string[]>;
+  clearRecentFiles(): Promise<void>;
+  revealPath(path: string): Promise<string>;
+  writeImageFile(tabId: string, name: string, base64: string): Promise<string>;
+  saveSessionNow(): Promise<void>;
   onWatchEvent(cb: (e: WatchEvent) => void): void;
   onMenuAction(cb: (action: string) => void): void;
   onQuitRequest(cb: () => void): void;
@@ -227,6 +234,12 @@ export function createBackend(): Backend {
     onQuitRequest: (cb) => evQuit.push(cb),
     onOpenPaths: (cb) => evOpen.push(cb),
     markExternalReady: async () => (await call<string[]>("MarkExternalReady")) ?? [],
+    getLastSession: async () => (await call<string[]>("GetLastSession")) ?? [],
+    getRecentFiles: async () => (await call<string[]>("GetRecentFiles")) ?? [],
+    clearRecentFiles: () => call<void>("ClearRecentFiles"),
+    revealPath: async (p) => (await call<string>("RevealPath", p)) ?? "",
+    writeImageFile: (tabId, name, b64) => call<string>("WriteImageFile", tabId, name, b64),
+    saveSessionNow: () => call<void>("SaveSessionNow"),
   };
 }
 
@@ -304,5 +317,11 @@ function createBridgeBackend(): Backend {
     onQuitRequest: (cb) => quit.push(cb),
     onOpenPaths: (cb) => open.push(cb),
     markExternalReady: async () => (await call("MarkExternalReady")) ?? [],
+    getLastSession: async () => (await call("GetLastSession")) ?? [],
+    getRecentFiles: async () => (await call("GetRecentFiles")) ?? [],
+    clearRecentFiles: () => call("ClearRecentFiles"),
+    revealPath: async (p) => (await call("RevealPath", p)) ?? "",
+    writeImageFile: (tabId, name, b64) => call("WriteImageFile", tabId, name, b64),
+    saveSessionNow: () => call("SaveSessionNow"),
   };
 }

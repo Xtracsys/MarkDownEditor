@@ -120,7 +120,7 @@ export async function openSettingsModal(current: AppSettings): Promise<AppSettin
 
   const sectionOf = (r: Row) => {
     if (r.label === "Theme") return "Appearance";
-    if (r.label.startsWith("Auto-save")) return "Auto-save";
+    if (r.label.startsWith("Auto-save") || r.label.startsWith("Restore session")) return "Auto-save";
     if (r.label === "Block remote resources in preview") return "Preview";
     if (r.label === "Crash recovery") return "Preview";
     return "Editor";
@@ -187,3 +187,62 @@ export async function openSettingsModal(current: AppSettings): Promise<AppSettin
 }
 
 export { showModal };
+
+/** Editable file-name dialog for pasted images. Returns the chosen name, or
+ * null on cancel. */
+export async function imageNameDialog(suggested: string): Promise<string | null> {
+  const overlay = document.createElement("div");
+  overlay.className = "overlay";
+  const modal = document.createElement("div");
+  modal.className = "modal";
+  modal.setAttribute("role", "dialog");
+  const head = document.createElement("div");
+  head.className = "modal-head";
+  head.textContent = "Save pasted image";
+  const body = document.createElement("div");
+  body.className = "modal-body";
+  body.style.width = "420px";
+  const note = document.createElement("div");
+  note.textContent =
+    "The image will be written as a new file into the document's folder and referenced from the Markdown.";
+  note.style.marginBottom = "10px";
+  const input = document.createElement("input");
+  input.type = "text";
+  input.value = suggested;
+  input.style.cssText =
+    "width:100%;background:var(--bg);border:1px solid var(--border-strong);color:var(--text);border-radius:6px;padding:6px 8px;font-size:12.5px;font-family:ui-monospace,Menlo,monospace";
+  body.append(note, input);
+  const foot = document.createElement("div");
+  foot.className = "modal-foot";
+  const cancel = document.createElement("button");
+  cancel.className = "btn";
+  cancel.textContent = "Cancel";
+  const save = document.createElement("button");
+  save.className = "btn primary";
+  save.textContent = "Save Image";
+  foot.append(cancel, save);
+  modal.append(head, body, foot);
+  overlay.appendChild(modal);
+  document.body.appendChild(overlay);
+  input.focus();
+  input.select();
+
+  return new Promise((resolve) => {
+    const close = (v: string | null) => {
+      overlay.remove();
+      document.removeEventListener("keydown", onKey, true);
+      resolve(v);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (document.body.querySelector(".overlay:last-of-type") !== overlay) return;
+      if (e.key === "Escape") { e.preventDefault(); close(null); }
+      if (e.key === "Enter") { e.preventDefault(); close(input.value.trim() || null); }
+    };
+    document.addEventListener("keydown", onKey, true);
+    overlay.addEventListener("mousedown", (e) => {
+      if (e.target === overlay) close(null);
+    });
+    cancel.addEventListener("click", () => close(null));
+    save.addEventListener("click", () => close(input.value.trim() || null));
+  });
+}

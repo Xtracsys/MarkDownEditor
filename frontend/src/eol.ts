@@ -24,7 +24,7 @@
 // always byte-exact; mixed files keep their endings except at freshly created
 // line boundaries. Undo/redo runs through the same math.
 
-import { Facet, StateField, Transaction } from "@codemirror/state";
+import { Facet, StateEffect, StateField, Transaction } from "@codemirror/state";
 import type { Eol } from "./ipc";
 
 export const DEFAULT_EOL = "\n";
@@ -39,10 +39,17 @@ export const eolConfig = Facet.define<EolDocState, EolDocState>({
   combine: (vals) => (vals.length ? vals[vals.length - 1] : { eols: [""], defaultEol: DEFAULT_EOL }),
 });
 
+/** Deliberate line-ending normalization: replaces the entire terminator
+ * array in one transaction (used by the Normalize Line Endings command). */
+export const setEolsEffect = StateEffect.define<readonly Eol[]>();
+
 /** The aligned terminator array; eols[i] follows line i. */
 export const eolField = StateField.define<readonly Eol[]>({
   create: (state) => state.facet(eolConfig).eols,
   update: (value, tr) => {
+    for (const e of tr.effects) {
+      if (e.is(setEolsEffect)) return e.value;
+    }
     if (!tr.docChanged) return value;
     const cfg = tr.state.facet(eolConfig);
     return applyChanges(value, tr, cfg.defaultEol);

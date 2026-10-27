@@ -8,9 +8,12 @@ package app
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
+	"net/http"
 	"net/url"
 	"os"
+	"os/exec"
 	"path/filepath"
 	goruntime "runtime"
 	"sync"
@@ -21,6 +24,7 @@ import (
 
 	"github.com/xtracsys/xtracsys-editor/internal/fileio"
 	"github.com/xtracsys/xtracsys-editor/internal/recovery"
+	"github.com/xtracsys/xtracsys-editor/internal/session"
 	"github.com/xtracsys/xtracsys-editor/internal/settings"
 )
 
@@ -96,6 +100,7 @@ type App struct {
 	watcher  *fileio.Watcher
 	settings settings.Settings
 	recov    *recovery.Store
+	sess     *session.Store
 
 	// eventSink routes Go→frontend events. In the desktop app it wraps
 	// runtime.EventsEmit; the E2E bridge server swaps it for SSE.
@@ -134,6 +139,7 @@ func (a *App) InitHeadless(ctx context.Context, sink func(name string, data inte
 	a.settings, _ = settings.Load()
 	if dir, err := settings.Dir(); err == nil {
 		a.recov, _ = recovery.New(dir)
+		a.sess, _ = session.New(dir)
 	}
 	a.watcher = fileio.NewWatcher(func(ev fileio.WatchEvent) {
 		a.emitEvent(EventWatch, ev)
@@ -141,6 +147,8 @@ func (a *App) InitHeadless(ctx context.Context, sink func(name string, data inte
 	go a.watcher.Run(ctx)
 }
 
+// rebuildMenu refreshes the native application menu (recent files) when the
+// menu has been installed. Defined in menu.go.
 func (a *App) emitEvent(name string, data interface{}) {
 	a.mu.Lock()
 	sink := a.eventSink
@@ -161,7 +169,9 @@ func (a *App) Startup(ctx context.Context) {
 	a.settings, _ = settings.Load()
 	if dir, err := settings.Dir(); err == nil {
 		a.recov, _ = recovery.New(dir)
+		a.sess, _ = session.New(dir)
 	}
+	a.rebuildMenu() // now that ctx exists: install menu with recent files
 	a.watcher = fileio.NewWatcher(func(ev fileio.WatchEvent) {
 		a.emitEvent(EventWatch, ev)
 	})
@@ -180,8 +190,144 @@ func (a *App) Startup(ctx context.Context) {
 	go a.watcher.Run(ctx)
 }
 
-// Shutdown cancels the watcher.
-func (a *App) Shutdown(ctx context.Context) {}
+// Shutdown cancels the watcher and records the session (open named
+// documents, in tab order) so the next launch can restore it.
+func (a *App) Shutdown(ctx context.Context) {
+	a.SaveSessionNow()
+}
+
+// SaveSessionNow records the currently open named documents. Called
+// automatically on graceful shutdown; also exposed for tests.
+func (a *App) SaveSessionNow() {
+	if a.sess == nil {
+		return
+	}
+	a.mu.Lock()
+	paths := make([]string, 0, len(a.tabs))
+	for _, t := range a.tabs {
+		if t.path != "" {
+			paths = append(paths, t.path)
+		}
+	}
+	a.mu.Unlock()
+	_ = a.sess.SaveLastSession(paths)
+}
+
+// GetLastSession returns the previously recorded session's existing paths,
+// or an empty list when session restore is disabled.
+func (a *App) GetLastSession() []string {
+	a.debugLog("GetLastSession", a.settings.RestoreSession)
+	if !a.settings.RestoreSession {
+		return []string{}
+	}
+	if a.sess == nil {
+		return []string{}
+	}
+	return a.sess.LoadLastSession()
+}
+
+// ClearSession empties the recorded session (used by tests and diagnostics).
+func (a *App) ClearSession() {
+	if a.sess != nil {
+		_ = a.sess.SaveLastSession([]string{})
+	}
+}
+
+// GetRecentFiles returns the recent-files list, most recent first.
+func (a *App) GetRecentFiles() []string {
+	if a.sess == nil {
+		return []string{}
+	}
+	return a.sess.LoadRecent()
+}
+
+// ClearRecentFiles empties the recent-files list.
+func (a *App) ClearRecentFiles() {
+	if a.sess != nil {
+		a.sess.ClearRecent()
+		a.rebuildMenu()
+	}
+}
+
+// RevealPath shows the file in the OS file manager (Finder/Explorer).
+// Returns an empty string on success, else a user-readable message.
+func (a *App) RevealPath(path string) string {
+	if _, err := os.Stat(path); err != nil {
+		return "File not found: " + path
+	}
+	var cmd *exec.Cmd
+	switch goruntime.GOOS {
+	case "darwin":
+		cmd = exec.Command("open", "-R", path)
+	case "windows":
+		cmd = exec.Command("explorer", "/select,", path)
+	default:
+		cmd = exec.Command("xdg-open", filepath.Dir(path))
+	}
+	if err := cmd.Start(); err != nil {
+		return "Could not open the file manager: " + err.Error()
+	}
+	go cmd.Wait()
+	return ""
+}
+
+// WriteImageFile stores pasted clipboard image data next to the document and
+// returns the file name actually used (never overwrites; suffixes -1, -2…).
+// Only PNG and JPEG are accepted, 20 MB cap — the same policy as the preview.
+func (a *App) WriteImageFile(tabId, name, base64Data string) (string, error) {
+	a.mu.Lock()
+	t, ok := a.tabs[tabId]
+	a.mu.Unlock()
+	if !ok {
+		return "", fmt.Errorf("unknown tab")
+	}
+	if t.path == "" {
+		return "", fmt.Errorf("save the document first so the image has a destination")
+	}
+	if len(base64Data) > 27*1024*1024 { // ~20 MB decoded
+		return "", fmt.Errorf("image exceeds the 20 MB limit")
+	}
+	data, err := base64.StdEncoding.DecodeString(base64Data)
+	if err != nil {
+		return "", fmt.Errorf("image data could not be decoded")
+	}
+	ct := http.DetectContentType(data)
+	if ct != "image/png" && ct != "image/jpeg" {
+		return "", fmt.Errorf("clipboard image is %s; only PNG and JPEG are supported", ct)
+	}
+	ext := ".png"
+	if ct == "image/jpeg" {
+		ext = ".jpg"
+	}
+	dir := filepath.Dir(t.path)
+	base := strings.TrimSuffix(name, filepath.Ext(name))
+	base = strings.Map(func(r rune) rune {
+		switch {
+		case r >= 'a' && r <= 'z', r >= 'A' && r <= 'Z', r >= '0' && r <= '9', r == '-', r == '_':
+			return r
+		default:
+			return '-'
+		}
+	}, base)
+	if base == "" || strings.HasPrefix(base, ".") {
+		base = "pasted-image"
+	}
+	for attempt := 0; attempt < 100; attempt++ {
+		candidate := base + ext
+		if attempt > 0 {
+			candidate = fmt.Sprintf("%s-%d%s", base, attempt, ext)
+		}
+		full := filepath.Join(dir, candidate)
+		if _, err := os.Stat(full); err == nil {
+			continue
+		}
+		if err := os.WriteFile(full, data, 0o644); err != nil {
+			return "", fmt.Errorf("could not write the image: %v", err)
+		}
+		return candidate, nil
+	}
+	return "", fmt.Errorf("could not find a free file name")
+}
 
 // beforeClose implements the unsaved-work guard: closing with dirty tabs is
 // intercepted once; the frontend runs its save/discard/cancel flow and then
@@ -290,6 +436,10 @@ func (a *App) openOne(path string, readOnlyMode bool) OpenOutcome {
 	a.mu.Lock()
 	tab := a.newTabLocked(path, res)
 	a.mu.Unlock()
+	if a.sess != nil {
+		_ = a.sess.AddRecent(path)
+		a.rebuildMenu()
+	}
 	return OpenOutcome{Tab: tab}
 }
 
@@ -604,6 +754,7 @@ func (a *App) GetSettings() (settings.Settings, error) {
 
 // PutSettings validates and persists settings.
 func (a *App) PutSettings(s settings.Settings) error {
+	a.debugLog("PutSettings", s.RestoreSession)
 	if err := settings.Save(s); err != nil {
 		return err
 	}

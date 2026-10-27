@@ -459,3 +459,181 @@ test("startup never shows the fatal backend error", async ({ page }) => {
   const body = await page.locator("body").innerText();
   expect(body).not.toContain("could not reach its backend");
 });
+
+// ------------------------------------------------------------------
+// Session restore, convert commands, recent files, outline, image paste
+
+test("session restore reopens the last session's documents", async ({ page }) => {
+  const file = join(docs, "session.md");
+  writeFileSync(file, "# session content\n", "utf8");
+  await openApp(page);
+  await resetSettings(page);
+  await openFile(page, file);
+  // Simulate a graceful quit's session snapshot.
+  await page.evaluate(async () => {
+    await fetch("/api/SaveSessionNow", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ args: [] }) });
+    // Clear stale recovery snapshots from earlier tests so the offer modal
+    // does not race this assertion.
+    const list = await (await fetch("/api/ListRecovery", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ args: [] }) })).json();
+    const ids = (list.result || []).map((e: { id: string }) => e.id);
+    if (ids.length) {
+      await fetch("/api/DiscardRecovery", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ args: [ids] }) });
+    }
+  });
+  await page.reload();
+  await page.waitForFunction(() => !!(window as never as { __xe?: unknown }).__xe);
+  await page.waitForTimeout(1500); // startup: recovery check + session restore
+  // The shared bridge home may hold a longer session from earlier tests —
+  // the contract is that session.md is among the restored tabs.
+  const name = file.split("/").pop() || file;
+  await expect(page.locator(".tab", { hasText: name }).first()).toBeVisible({ timeout: 8000 });
+});
+
+test("restore-session setting controls whether the session reopens", async ({ page }) => {
+  const file = join(docs, "session-off.md");
+  writeFileSync(file, "# off\n", "utf8");
+  await openApp(page);
+  await resetSettings(page);
+  await openFile(page, file);
+  await page.evaluate(async () => {
+    await fetch("/api/SaveSessionNow", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ args: [] }) });
+    const list = await (await fetch("/api/ListRecovery", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ args: [] }) })).json();
+    const ids = (list.result || []).map((e: { id: string }) => e.id);
+    if (ids.length) {
+      await fetch("/api/DiscardRecovery", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ args: [ids] }) });
+    }
+  });
+  await page.evaluate(async () => {
+    const w = window as never as { __xe: { app: { getSettings(): Promise<Record<string, unknown>>; updateSettings(s: Record<string, unknown>): Promise<void> } } };
+    const s = await w.__xe.app.getSettings();
+    await w.__xe.app.updateSettings({ ...s, restoreSession: false });
+  });
+  // The reload must not race the settings write: poll until the BACKEND
+  // reports restoreSession=false, then boot is deterministic.
+  await expect
+    .poll(async () => {
+      const r = await page.evaluate(async () => {
+        const r = await fetch("/api/GetSettings", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ args: [] }) });
+        return (await r.json()).result?.restoreSession;
+      });
+      return r;
+    }, { timeout: 8000 })
+    .toBe(false);
+  await page.reload();
+  await page.waitForFunction(() => !!(window as never as { __xe?: unknown }).__xe);
+  await page.waitForTimeout(1200);
+  const name = file.split("/").pop() || file;
+  try {
+    await expect(page.locator(".tab.active")).toContainText("Untitled", { timeout: 8000 });
+  } catch (e) {
+    const dump = await page.evaluate(async () => {
+      const st = await window.__xe.app.getSettings();
+      return {
+        restore: st.restoreSession,
+        tabs: [...document.querySelectorAll(".tab")].map((t) => t.textContent),
+        modal: !!document.querySelector(".modal"),
+        url: location.href,
+      };
+    });
+    console.log("RESTORE-OFF FAILURE DUMP:", JSON.stringify(dump));
+    throw e;
+  }
+  await expect(page.locator(".tab.active")).not.toContainText(name);
+});
+
+test("normalize line endings converts mixed endings to the predominant style on save", async ({ page }) => {
+  const file = join(docs, "normalize.md");
+  writeFileSync(file, "a\r\nb\nc", "utf8"); // mixed: CRLF then LF, no final newline
+  await openApp(page);
+  await resetSettings(page);
+  await openFile(page, file);
+  await expect(page.locator("#status-eol")).toHaveText("Mixed EOL");
+  await page.evaluate(() =>
+    void (window as never as { __xe: { app: { normalizeLineEndings(): Promise<void> } } }).__xe.app.normalizeLineEndings(),
+  );
+  // Confirm the conversion modal.
+  const dialog = page.locator(".modal");
+  await expect(dialog).toContainText("Normalize");
+  await dialog.getByRole("button", { name: "Normalize" }).click();
+  await expect(page.locator("#status-eol")).toHaveText("CRLF");
+  await page.evaluate(() =>
+    void (window as never as { __xe: { app: { saveActive(): Promise<boolean> } } }).__xe.app.saveActive(),
+  );
+  await page.waitForTimeout(400);
+  expect(bytes(file)).toBe("a\r\nb\r\nc\r\n"); // every line normalized to CRLF
+});
+
+test("convert to UTF-8 re-encodes the file on save", async ({ page }) => {
+  const file = join(docs, "utf16.txt");
+  // UTF-16 LE with BOM: "hello wide\n"
+  const content = "hello wide\n";
+  const le = Buffer.from(content, "utf16le");
+  const bom = Buffer.from([0xff, 0xfe]);
+  writeFileSync(file, Buffer.concat([bom, le]));
+  await openApp(page);
+  await resetSettings(page);
+  await openFile(page, file);
+  await expect(page.locator("#status-encoding")).toContainText("UTF-16");
+  await page.evaluate(() =>
+    void (window as never as { __xe: { app: { convertToUTF8(): Promise<void> } } }).__xe.app.convertToUTF8(),
+  );
+  const dialog = page.locator(".modal");
+  await expect(dialog).toContainText("Convert to UTF-8");
+  await dialog.getByRole("button", { name: "Convert" }).click();
+  await expect(page.locator("#status-encoding")).toContainText("UTF-8");
+  await page.evaluate(() =>
+    void (window as never as { __xe: { app: { saveActive(): Promise<boolean> } } }).__xe.app.saveActive(),
+  );
+  await page.waitForTimeout(400);
+  expect(bytes(file)).toBe(content);
+});
+
+test("outline panel lists headings and jumps to them", async ({ page }) => {
+  const file = join(docs, "outline.md");
+  writeFileSync(file, "# First\n\ntext\n\n## Second\n\nmore\n", "utf8");
+  await openApp(page);
+  await resetSettings(page);
+  await openFile(page, file);
+  await page.click("#btn-outline");
+  await expect(page.locator("#main")).toHaveClass(/with-outline/);
+  await expect(page.locator("#outline .outline-h1")).toContainText("First");
+  await expect(page.locator("#outline .outline-h2")).toContainText("Second");
+  await page.locator("#outline .outline-h2").click();
+  // Cursor moved to the "## Second" line (line 5 → Ln 5).
+  await expect(page.locator("#status-pos")).toContainText("Ln 5");
+});
+
+test("paste image writes a file next to the document and inserts a reference", async ({ page }) => {
+  const file = join(docs, "paste-target.md");
+  writeFileSync(file, "before\n", "utf8");
+  await openApp(page);
+  await resetSettings(page);
+  await openFile(page, file);
+  // Drive the real flow: dispatch a synthetic paste carrying an image file.
+  await page.evaluate(() => {
+    const b64 = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
+    const bin = atob(b64);
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    const file = new File([bytes], "clip.png", { type: "image/png" });
+    const dt = new DataTransfer();
+    dt.items.add(file);
+    const ev = new Event("paste", { bubbles: true });
+    Object.defineProperty(ev, "clipboardData", { value: dt });
+    document.querySelector(".cm-content")!.dispatchEvent(ev);
+  });
+  const dialog = page.locator(".modal");
+  await expect(dialog).toContainText("Save pasted image");
+  await dialog.getByRole("button", { name: "Save Image" }).click();
+  await page.waitForTimeout(500);
+  await page.evaluate(() =>
+    void (window as never as { __xe: { app: { saveActive(): Promise<boolean> } } }).__xe.app.saveActive(),
+  );
+  await page.waitForTimeout(400);
+  const expected = join(docs, "paste-target.md");
+  const content = readFileSync(expected, "utf8");
+  expect(content).toContain("![pasted-");
+  // The referenced image file exists next to the document.
+  const imgRef = content.match(/!\[[^\]]*\]\(([^)]+)\)/)?.[1] || "";
+  expect(readFileSync(join(docs, imgRef)).length).toBeGreaterThan(50);
+});

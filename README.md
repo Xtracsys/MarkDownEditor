@@ -51,6 +51,16 @@ Every editing feature is built around file integrity:
 - **Open With support** — open documents from the Finder ("Open With",
   dragging onto the Dock icon), from the command line, or by dragging files
   onto the editor window; multiple files arrive in order as separate tabs
+- **Session restore** (on by default, a setting to turn it off) reopens the
+  documents that were open at last quit; an **Open Recent** menu and
+  recent-files list on the empty screen cover everything else
+- **Deliberate conversions** — File → Convert → "Convert to UTF-8" and
+  "Normalize Line Endings" mark the document modified and save when YOU
+  choose Save; nothing is ever re-encoded silently
+- **Markdown outline panel** (Alt+O) — clickable heading tree; **image
+  paste** writes the clipboard image as a new file next to the document and
+  references it; **print** the rendered preview (⌘P)
+- Tab context menu: reveal the file in Finder/Explorer, copy its path
 - Status bar: full path, encoding, line-ending style, language, cursor position
 - Standard shortcuts (`⌘/Ctrl+N/O/S/W`, `⌘⇧S`, `⌘/Ctrl+,` …) — see
   Help → Keyboard Shortcuts

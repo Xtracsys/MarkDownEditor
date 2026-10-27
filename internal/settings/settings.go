@@ -28,6 +28,9 @@ type Settings struct {
 	ShowLineNumbers bool   `json:"showLineNumbers"` // gutter line numbers
 	HighlightActiveLine bool `json:"highlightActiveLine"`
 	EditorFontSize  int    `json:"editorFontSize"`  // px, 0 = default
+	// RestoreSession reopens the last session's documents on launch. The
+	// session store holds paths only and lives in this app-data folder.
+	RestoreSession bool `json:"restoreSession"`
 	// BlockRemoteResources stops the Markdown preview from loading anything
 	// over the network (images, fonts, styles). The editor is local-first;
 	// this is on by default and the only privacy switch of its kind.
@@ -46,6 +49,7 @@ func Defaults() Settings {
 		ShowLineNumbers:      true,
 		HighlightActiveLine:  true,
 		EditorFontSize:       0,
+		RestoreSession:       true,
 		BlockRemoteResources: true,
 	}
 }

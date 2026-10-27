@@ -55,6 +55,12 @@ test.describe("dynamic security: preview XSS battery", () => {
     writeFileSync(join(docs, "battery.md"), parts.join("\n"), "utf8");
 
     page = await browser.newPage({ viewport: { width: 1280, height: 840 } });
+    await page.goto("/?e2e=1");
+    await page.waitForFunction(() => !!(window as never as { __xe?: unknown }).__xe);
+    // Keep the boot-time session restore out of the security assertions.
+    await page.evaluate(async () => {
+      await fetch("/api/ClearSession", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ args: [] }) });
+    });
     page.on("dialog", async (d) => {
       violations.push(`dialog: ${d.type()} ${d.message()}`);
       await d.dismiss();

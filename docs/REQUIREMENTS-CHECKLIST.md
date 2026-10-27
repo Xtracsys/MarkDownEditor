@@ -144,6 +144,21 @@ and how it is verified. Verification codes: **[T]** automated test,
 Three audit passes + dependency/secrets scans; all medium/low findings fixed
 with regression tests; toolchain pinned to Go 1.26.10 for stdlib CVE fixes.
 
+## New in 0.1.5 — approved roadmap features
+
+- Session restore (setting, default on; paths only, app-data store;
+  missing files dropped silently) — **[T]** internal/session suite;
+  **[E2E]** restore on/off
+- Recent files (native Open Recent menu rebuilt on change + empty-state
+  list + Clear) — **[T]**; manual menu check on each platform
+- Convert to UTF-8 / Normalize Line Endings (two-step: mark modified, the
+  user saves) — **[T]** fuzz + unit; **[E2E]** byte checks
+- Markdown outline panel (Alt+O; fence-aware) — **[T]** vitest; **[E2E]**
+- Image paste from clipboard (new file next to the document, user-named,
+  never overwrites, PNG/JPEG only) — **[T]**; **[E2E]** real paste event
+- Reveal in Finder/Explorer + Copy Path (tab context menu) — manual
+- Print preview (⌘P, iframe print) — manual
+
 ## 9. Acceptance tests — see §1–§6 above; every item that can be tested
 ## headlessly is covered by an automated suite. Remaining interactive items
 ## are listed in PLATFORM-STATUS.md's manual checklist.

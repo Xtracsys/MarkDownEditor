@@ -285,6 +285,37 @@ func dispatch(a *app.App, method string, args []json.RawMessage) (interface{}, e
 		return nil, nil
 	case "MarkExternalReady":
 		return a.MarkExternalReady(), nil
+	case "GetLastSession":
+		return a.GetLastSession(), nil
+	case "GetRecentFiles":
+		return a.GetRecentFiles(), nil
+	case "ClearRecentFiles":
+		a.ClearRecentFiles()
+		return nil, nil
+	case "RevealPath":
+		var p string
+		if err := dec(0, &p); err != nil {
+			return nil, err
+		}
+		return a.RevealPath(p), nil
+	case "WriteImageFile":
+		var tabId, name, b64 string
+		if err := dec(0, &tabId); err != nil {
+			return nil, err
+		}
+		if err := dec(1, &name); err != nil {
+			return nil, err
+		}
+		if err := dec(2, &b64); err != nil {
+			return nil, err
+		}
+		return a.WriteImageFile(tabId, name, b64)
+	case "ClearSession":
+		a.ClearSession()
+		return nil, nil
+	case "SaveSessionNow":
+		a.SaveSessionNow()
+		return nil, nil
 	case "_EmitMenuAction": // test hook: simulate a native menu click
 		var action string
 		if err := dec(0, &action); err != nil {

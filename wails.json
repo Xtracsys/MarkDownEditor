@@ -11,7 +11,7 @@
   },
   "info": {
     "productName": "Xtracsys Editor",
-    "productVersion": "0.1.4",
+    "productVersion": "0.1.5",
     "copyright": "Copyright 2026 Xtracsys",
     "comments": "A local-first text and Markdown editor",
     "fileAssociations": [

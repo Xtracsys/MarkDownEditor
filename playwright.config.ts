@@ -18,7 +18,7 @@ export default defineConfig({
     viewport: { width: 1280, height: 840 },
   },
   webServer: {
-    command: `go run ./cmd/e2e-serve -addr 127.0.0.1:${port} -dist frontend/dist -home ${resolve(here, "tests/e2e/.home")} -fresh-home`,
+    command: `XTRACSYS_EDITOR_DEBUG=1 go run ./cmd/e2e-serve -addr 127.0.0.1:${port} -dist frontend/dist -home ${resolve(here, "tests/e2e/.home")} -fresh-home`,
     url: `http://127.0.0.1:${port}/`,
     reuseExistingServer: false,
     timeout: 60000,
