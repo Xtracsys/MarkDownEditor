@@ -244,6 +244,7 @@ func (a *App) AppInfo() map[string]string {
 // NewTab creates an untitled document. Untitled documents are never written
 // anywhere until the user names them via Save As.
 func (a *App) NewTab() *TabInfo {
+	a.debugLog("NewTab", nil)
 	a.mu.Lock()
 	defer a.mu.Unlock()
 	empty := &fileio.LoadResult{Content: "", Encoding: fileio.EncUTF8, Eols: []string{""}, DefaultEol: fileio.LF, EolSummary: string(fileio.SummaryNone)}
@@ -254,6 +255,9 @@ func (a *App) NewTab() *TabInfo {
 func (a *App) OpenPaths(paths []string) []OpenOutcome {
 	a.debugLog("OpenPaths", paths)
 	out := make([]OpenOutcome, 0, len(paths))
+	if out == nil {
+		out = []OpenOutcome{}
+	}
 	for _, p := range paths {
 		out = append(out, a.openOne(p, false))
 	}
@@ -463,13 +467,29 @@ func (a *App) ClearRecovery(tabId string) {
 }
 
 // ListRecovery returns snapshots left behind by a crash or forced quit.
+func (a *App) ListRecoveryTraced() {} // placeholder removed below
+
+// ListRecoveryReal is unused.
+func (a *App) ListRecoveryUnused() {}
+// Nil slices marshal as JSON null, which crashes JS consumers evaluating
+// .length — every slice crossing the binding boundary is materialized.
 func (a *App) ListRecovery() []recovery.Entry {
+	empty := []recovery.Entry{}
 	if a.recov == nil {
-		return []recovery.Entry{}
+		return empty
 	}
 	list, err := a.recov.List()
 	if err != nil {
-		return []recovery.Entry{}
+		return empty
+	}
+	a.debugLog("ListRecovery", len(list))
+	if list == nil {
+		return empty
+	}
+	for i := range list {
+		if list[i].Eols == nil {
+			list[i].Eols = []string{}
+		}
 	}
 	return list
 }

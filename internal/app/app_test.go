@@ -4,8 +4,10 @@
 package app
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -114,5 +116,30 @@ func TestContextCancelled(t *testing.T) {
 	time.Sleep(50 * time.Millisecond)
 	if _, err := os.Stat("/"); err != nil {
 		t.Fatal("sanity")
+	}
+}
+
+// Regression for the production crash: ListRecovery on a fresh store must
+// marshal as [] (not null) — JS consumers evaluate .length on it.
+func TestListRecoveryMarshalsEmptyNotNUll(t *testing.T) {
+	a, _ := headlessApp(t)
+	data, err := json.Marshal(a.ListRecovery())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(data) != "[]" {
+		t.Fatalf("ListRecovery JSON = %s, want []", data)
+	}
+}
+
+// NewTab's Warnings must marshal as [] too.
+func TestNewTabWarningsNotNull(t *testing.T) {
+	a, _ := headlessApp(t)
+	data, err := json.Marshal(a.NewTab())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(data), `"warnings":[]`) {
+		t.Fatalf("NewTab JSON missing warnings:[]: %s", data)
 	}
 }

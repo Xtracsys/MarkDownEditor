@@ -197,7 +197,7 @@ export function createBackend(): Backend {
   return {
     appInfo: () => call<AppInfo>("AppInfo"),
     newTab: () => call<TabInfo>("NewTab"),
-    openPaths: (p) => call<OpenOutcome[]>("OpenPaths", p),
+    openPaths: async (p) => (await call<OpenOutcome[]>("OpenPaths", p)) ?? [],
     openPathReadOnly: (p) => call<OpenOutcome>("OpenPathReadOnly", p),
     pickAndOpen: () => call<OpenOutcome[]>("PickAndOpen"),
     pickSaveAsPath: (n) => call<string>("PickSaveAsPath", n),
@@ -213,7 +213,7 @@ export function createBackend(): Backend {
     snapshotTab: (tabId, path, content, eols, encoding) =>
       call<void>("SnapshotTab", tabId, path, content, eols, encoding),
     clearRecovery: (tabId) => call<void>("ClearRecovery", tabId),
-    listRecovery: () => call<RecoveryEntry[]>("ListRecovery"),
+    listRecovery: async () => (await call<RecoveryEntry[]>("ListRecovery")) ?? [],
     discardRecovery: (ids) => call<void>("DiscardRecovery", ids),
     recoverEntry: (id) => call<OpenOutcome>("RecoverEntry", id),
     onWatchEvent: (cb) => evWatch.push(cb),
@@ -269,7 +269,7 @@ function createBridgeBackend(): Backend {
   return {
     appInfo: () => call("AppInfo"),
     newTab: () => call("NewTab"),
-    openPaths: (p) => call("OpenPaths", p),
+    openPaths: async (p) => (await call("OpenPaths", p)) ?? [],
     openPathReadOnly: (p) => call("OpenPathReadOnly", p),
     pickAndOpen: () => call("PickAndOpen"),
     pickSaveAsPath: (n) => call("PickSaveAsPath", n),
@@ -285,7 +285,7 @@ function createBridgeBackend(): Backend {
     snapshotTab: (tabId, path, content, eols, encoding) =>
       call("SnapshotTab", tabId, path, content, eols, encoding),
     clearRecovery: (tabId) => call("ClearRecovery", tabId),
-    listRecovery: () => call("ListRecovery"),
+    listRecovery: async () => (await call("ListRecovery")) ?? [],
     discardRecovery: (ids) => call("DiscardRecovery", ids),
     recoverEntry: (id) => call("RecoverEntry", id),
     onWatchEvent: (cb) => watch.push(cb),

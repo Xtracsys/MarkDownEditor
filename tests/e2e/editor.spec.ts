@@ -450,3 +450,12 @@ test("documents opened with the app externally arrive in the editor", async ({ p
   }, file);
   await expect(page.locator(".tab.active")).toContainText(name, { timeout: 8000 });
 });
+
+
+test("startup never shows the fatal backend error", async ({ page }) => {
+  await openApp(page);
+  // The fatal-error surface must stay hidden and a working editor visible.
+  await expect(page.locator(".cm-content")).toBeVisible({ timeout: 8000 });
+  const body = await page.locator("body").innerText();
+  expect(body).not.toContain("could not reach its backend");
+});

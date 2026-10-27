@@ -145,7 +145,7 @@ export class Application {
   async newTab() {
     const info = await this.backend.newTab();
     const state = await makeState({
-      info,
+      info: { ...info, eols: info.eols ?? [""], defaultEol: info.defaultEol ?? "\n" },
       settings: this.settings,
       theme: effective(),
       extraKeys: this.editorKeys(),
@@ -176,7 +176,7 @@ export class Application {
       const oc = outcomes[i];
       if (oc.tab) {
         const state = await makeState({
-          info: oc.tab,
+          info: { ...oc.tab, eols: oc.tab.eols ?? [""], defaultEol: oc.tab.defaultEol ?? "\n" },
           settings: this.settings,
           theme: effective(),
           extraKeys: this.editorKeys(),
@@ -925,7 +925,7 @@ export class Application {
     } catch {
       return;
     }
-    if (!entries.length) return;
+    if (!entries || !entries.length) return;
     const names = entries.map((e) => {
       const name = e.path ? e.path.split("/").pop() || e.path : "Untitled";
       return `• ${name}${e.path ? "" : " (never saved)"} — recovered copy from ${new Date(e.savedAt * 1000).toLocaleTimeString()}`;
@@ -952,7 +952,7 @@ export class Application {
       const oc = await this.backend.recoverEntry(e.id);
       if (oc.tab) {
         const state = await makeState({
-          info: oc.tab,
+          info: { ...oc.tab, eols: oc.tab.eols ?? [""], defaultEol: oc.tab.defaultEol ?? "\n" },
           settings: this.settings,
           theme: effective(),
           extraKeys: this.editorKeys(),
