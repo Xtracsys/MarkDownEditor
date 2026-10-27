@@ -171,6 +171,7 @@ export async function openSettingsModal(current: AppSettings): Promise<AppSettin
       resolve(result);
     };
     const onKey = (e: KeyboardEvent) => {
+      if (document.body.querySelector(".overlay:last-of-type") !== overlay) return;
       if (e.key === "Escape") {
         e.preventDefault();
         close(null);
@@ -178,7 +179,7 @@ export async function openSettingsModal(current: AppSettings): Promise<AppSettin
     };
     document.addEventListener("keydown", onKey, true);
     overlay.addEventListener("mousedown", (e) => {
-      if (e.target === overlay) close(null);
+      if (e.target === overlay && document.body.querySelector(".overlay:last-of-type") === overlay) close(null);
     });
     cancel.addEventListener("click", () => close(null));
     save.addEventListener("click", () => close(draft));

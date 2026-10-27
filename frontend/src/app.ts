@@ -11,7 +11,7 @@ import { EditorView, keymap } from "@codemirror/view";
 
 import type { Backend, Eol, OpenOutcome, TabInfo, AppSettings, WatchEvent } from "./ipc";
 import { eolField, equalsSaved } from "./eol";
-import { makeState, settingsEffects, isMarkdownPath } from "./editor";
+import { makeState, settingsEffects, isMarkdownPath, reconfigureLanguage } from "./editor";
 import { PreviewPane } from "./preview";
 import { showModal, toast, unsavedPrompt, quitPrompt, showBanner, removeBanner } from "./ui";
 import { initTheme, setTheme, effective, onThemeChange, type ThemeMode } from "./theme";
@@ -19,6 +19,7 @@ import { initTheme, setTheme, effective, onThemeChange, type ThemeMode } from ".
 export type ViewMode = "source" | "split" | "preview";
 
 class Tab {
+  dirtyRecheck: number | undefined;
   info: TabInfo;
   state: EditorState;
   dirty = false;
@@ -38,7 +39,7 @@ class Tab {
   }
   fileName(): string {
     if (!this.info.path) return "Untitled";
-    return this.info.path.split("/").pop() || this.info.path;
+    return this.info.path.split(/[\\/]/).pop() || this.info.path;
   }
 }
 
@@ -52,7 +53,6 @@ export class Application {
   private autosaveTimer: number | undefined;
   private snapshotTimer: number | undefined;
   private previewDebounce: number | undefined;
-  private dirtyRecheck: number | undefined;
   private saveInFlight = new Set<string>();
   private mode: ViewMode = "source";
   private splitRatio = 0.5;
@@ -100,7 +100,8 @@ export class Application {
       .then((i) => i.version || "")
       .catch(() => "");
     this.settings = await this.backend.getSettings().catch((e) => {
-      this.showFatalStartupError(String(e));
+      console.error("getSettings failed:", e);
+      toast("Settings unavailable", String(e));
       return defaultSettings();
     });
     setTheme(this.settings.theme as ThemeMode);
@@ -117,10 +118,12 @@ export class Application {
       this.bindShortcuts();
       await this.newTab();
       // External opens (Open With, argv, drag-drop) may queue before the UI
-      // is up; from here they are delivered live and any backlog flushes.
-      // This MUST come before offerRecovery: the recovery modal is
-      // interactive and must never gate document delivery.
-      await this.backend.markExternalReady();
+      // is up. markExternalReady returns the backlog as its RPC response —
+      // delivered here directly, immune to event-wiring races — and flips
+      // the app to live event delivery. MUST come before offerRecovery:
+      // the recovery modal is interactive and must never gate delivery.
+      const queued = await this.backend.markExternalReady();
+      if (queued && queued.length) await this.openPaths(queued);
       await this.offerRecovery();
     } catch (e) {
       this.showFatalStartupError(String(e));
@@ -204,7 +207,7 @@ export class Application {
       const pristine = this.tabs.find((t) => !t.info.path && !t.dirty && t.savedContent === "");
       this.setActive(firstTab);
       if (pristine && pristine !== firstTab && this.tabs.length > 1) {
-        await this.removeTab(pristine, true);
+        await this.closeTabBackendOnly(pristine);
       }
     } else if (!issues) {
       // canceled dialog: nothing to do
@@ -257,6 +260,7 @@ export class Application {
     const idx = this.tabs.indexOf(tab);
     if (idx < 0) return;
     this.tabs.splice(idx, 1);
+    removeBanner(this.bannerSlot, `ext-${tab.info.tabId}`);
     await this.backend.closeTab(tab.info.tabId);
     void this.backend.clearRecovery(tab.info.tabId);
     if (this.active === tab) {
@@ -276,11 +280,11 @@ export class Application {
     }
   }
 
-  /** Remove without prompts (used for the pristine initial tab). */
-  private async removeTab(tab: Tab, skipBackend = false) {
+  /** Remove the untouched initial tab without prompts. */
+  private async closeTabBackendOnly(tab: Tab) {
     const idx = this.tabs.indexOf(tab);
     if (idx >= 0) this.tabs.splice(idx, 1);
-    if (!skipBackend) await this.backend.closeTab(tab.info.tabId);
+    await this.backend.closeTab(tab.info.tabId);
   }
 
   // ------------------------------------------------------------------
@@ -313,7 +317,10 @@ export class Application {
 
   async saveTabAs(tab: Tab): Promise<boolean> {
     const suggested = tab.info.path ? tab.info.path.split("/").pop()! : tab.markdown ? "Untitled.md" : "Untitled.txt";
-    const target = await this.backend.pickSaveAsPath(suggested).catch(() => "");
+    const target = await this.backend.pickSaveAsPath(suggested).catch((e) => {
+      toast("Save dialog unavailable", String(e));
+      return "";
+    });
     if (!target) return false; // canceled
     if (this.saveInFlight.has(tab.info.tabId)) return false;
     this.saveInFlight.add(tab.info.tabId);
@@ -324,7 +331,7 @@ export class Application {
     }
   }
 
-  private async doSave(tab: Tab, path: string, overwrite: boolean): Promise<boolean> {
+  private async doSave(tab: Tab, path: string, overwrite: boolean, quiet = false): Promise<boolean> {
     const content = tab.state.doc.toString();
     const eols = tab.state.field(eolField).slice();
     const resp = await this.backend.saveTab(
@@ -341,18 +348,12 @@ export class Application {
       tab.info.path = resp.tab?.path || path;
       await this.backend.setDirty(tab.info.tabId, false);
       if (pathChanged) {
-        // Re-detect language/markdown for the new name, keeping content and
-        // the live EOL array intact.
+        // Only the language follows the new name — the editor state (undo
+        // history, cursor, scroll, EOL field) must survive Save As.
         tab.markdown = isMarkdownPath(tab.info.path);
-        const eolsNow = tab.state.field(eolField).slice();
-        const rebuilt = await makeState({
-          info: { ...tab.info, content, eols: eolsNow },
-          settings: this.settings,
-          theme: effective(),
-          extraKeys: this.editorKeys(),
-        });
-        tab.state = rebuilt;
+        tab.state = reconfigureLanguage(tab.state, tab.info.path);
         if (this.active === tab) this.view.setState(tab.state);
+        void content;
       }
       this.renderTabs();
       this.refreshStatus();
@@ -361,6 +362,13 @@ export class Application {
     }
 
     if (resp.issue?.reason === "external-change") {
+      if (quiet) {
+        // Auto-save must never pop a decision modal from a background save.
+        tab.extState = "changed";
+        if (this.active === tab) this.showTabBanners(tab);
+        toast("Auto-save paused", `“${tab.fileName()}” changed on disk — auto-save will not overwrite it. Decide via the banner.`);
+        return false;
+      }
       const choice = await showModal({
         title: "File changed on disk",
         body: `“${tab.fileName()}” was modified outside the editor after you opened it.\n\nOverwriting will replace the disk version with your edits. Reload discards your edits and loads the disk version.`,
@@ -407,8 +415,11 @@ export class Application {
       toast("Reload failed", outcome[0]?.issue?.message || "unknown error");
       return false;
     }
-    // Swap backend identity: new tab id carries fresh watcher state.
+    // Swap backend identity: new tab id carries fresh watcher state. The old
+    // tab's recovery snapshot is discarded work — never let it resurrect.
     await this.backend.closeTab(tab.info.tabId);
+    void this.backend.clearRecovery(tab.info.tabId);
+    removeBanner(this.bannerSlot, `ext-${tab.info.tabId}`);
     fresh.eols = fresh.eols.length ? fresh.eols : [""];
     const state = await makeState({
       info: fresh,
@@ -429,6 +440,8 @@ export class Application {
   // Active tab + rendering
 
   private setActive(tab: Tab) {
+    // External-change banners describe one tab: drop them all on switch.
+    this.bannerSlot.querySelectorAll('[data-banner^="ext-"]').forEach((el) => el.remove());
     this.active = tab;
     this.view.setState(tab.state);
     this.mode = tab.mode;
@@ -719,8 +732,12 @@ export class Application {
     if (choice === "cancel") return;
     if (choice === "save-all") {
       for (const tab of dirty) {
-        const ok = await this.saveTab(tab);
-        if (!ok) {
+        let ok = false;
+        for (let attempt = 0; attempt < 3 && !ok; attempt++) {
+          ok = await this.saveTab(tab);
+          if (!ok && tab.dirty) await new Promise((r) => setTimeout(r, 150));
+        }
+        if (!ok && tab.dirty) {
           toast("Quit canceled", "Not all documents could be saved.");
           return;
         }
@@ -852,8 +869,8 @@ export class Application {
 
   /** Undo-back-to-clean clears the dirty flag without touching the file. */
   private scheduleDirtyRecheck(tab: Tab) {
-    window.clearTimeout(this.dirtyRecheck);
-    this.dirtyRecheck = window.setTimeout(() => {
+    window.clearTimeout(tab.dirtyRecheck);
+    tab.dirtyRecheck = window.setTimeout(() => {
       if (!tab.dirty) return;
       const content = tab.state.doc.toString();
       const eols = tab.state.field(eolField);
@@ -889,7 +906,7 @@ export class Application {
       if (!tab.dirty || !tab.info.path || tab.info.readOnly) continue;
       if (tab.extState === "changed" || tab.extState === "deleted") continue;
       if (this.saveInFlight.has(tab.info.tabId)) continue;
-      const ok = await this.saveTab(tab);
+      const ok = await this.doSave(tab, tab.info.path, false, true);
       if (!ok && tab.dirty) {
         // A failed auto-save stops the timer for this session tick; the user
         // sees the failure toast and decides.

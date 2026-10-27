@@ -10,17 +10,17 @@
         <key>CFBundleIdentifier</key>
         <string>editors.xtracsys.xtracsys-editor</string>
         <key>CFBundleVersion</key>
-        <string>0.1.1</string>
+        <string>0.1.2</string>
         <key>CFBundleGetInfoString</key>
         <string>A local-first text and Markdown editor</string>
         <key>CFBundleShortVersionString</key>
-        <string>0.1.1</string>
+        <string>0.1.2</string>
         <key>CFBundleIconFile</key>
         <string>iconfile</string>
         <key>LSMinimumSystemVersion</key>
-        <string>10.13.0</string>
+        <string>12.0</string>
         <key>NSHighResolutionCapable</key>
-        <string>true</string>
+        <true/>
         <key>NSHumanReadableCopyright</key>
         <string>Copyright 2026 Xtracsys</string>
         

@@ -45,32 +45,22 @@ func TestExternalOpenQueuesUntilReady(t *testing.T) {
 		t.Fatalf("no event expected before MarkExternalReady, got %d", len(*events))
 	}
 
-	a.MarkExternalReady()
-	deadline := time.After(time.Second)
-	for {
-		mu := &sync.Mutex{}
-		_ = mu
-		if len(*events) > 0 {
-			break
-		}
-		select {
-		case <-deadline:
-			t.Fatal("queued open never flushed")
-		case <-time.After(10 * time.Millisecond):
-		}
+	returned := a.MarkExternalReady()
+	// Pull-based: the backlog arrives as the RPC result, never racing events.
+	if len(returned) != 1 || returned[0] != "/tmp/a.md" {
+		t.Fatalf("MarkExternalReady returned %v", returned)
 	}
-	if (*events)[0].name != EventOpenPaths {
-		t.Fatalf("event = %s, want %s", (*events)[0].name, EventOpenPaths)
-	}
-	paths := (*events)[0].data.([]string)
-	if len(paths) != 1 || paths[0] != "/tmp/a.md" {
-		t.Fatalf("paths = %v", paths)
+	time.Sleep(100 * time.Millisecond)
+	if len(*events) != 0 {
+		t.Fatalf("backlog must not also fire as an event: %d events", len(*events))
 	}
 }
 
 func TestExternalOpenAfterReadyEmitsImmediately(t *testing.T) {
 	a, events := headlessApp(t)
-	a.MarkExternalReady()
+	if got := a.MarkExternalReady(); len(got) != 0 {
+		t.Fatalf("first ready returned %v, want empty", got)
+	}
 	a.QueueExternalOpen([]string{"/tmp/b.md"})
 	deadline := time.After(time.Second)
 	for {

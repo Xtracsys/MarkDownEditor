@@ -114,7 +114,15 @@ func (s *Store) List() ([]Entry, error) {
 	}
 	var out []Entry
 	for _, de := range entries {
-		if de.IsDir() || !strings.HasSuffix(de.Name(), ".json") {
+		if de.IsDir() {
+			continue
+		}
+		// Sweep crash-orphaned temp files.
+		if strings.HasSuffix(de.Name(), ".tmp") {
+			os.Remove(filepath.Join(s.dir, de.Name()))
+			continue
+		}
+		if !strings.HasSuffix(de.Name(), ".json") {
 			continue
 		}
 		data, err := os.ReadFile(filepath.Join(s.dir, de.Name()))
@@ -125,8 +133,11 @@ func (s *Store) List() ([]Entry, error) {
 		if json.Unmarshal(data, &e) != nil {
 			continue // foreign or corrupt file: ignore
 		}
-		if e.ID == "" || e.Content == "" {
+		if e.ID == "" {
 			continue
+		}
+		if e.Eols == nil {
+			e.Eols = []string{}
 		}
 		out = append(out, e)
 	}

@@ -29,7 +29,7 @@ jobs:
 
       - uses: actions/setup-go@v5
         with:
-          go-version: "1.24"
+          go-version: "1.26.10"
           cache: true
 
       - uses: actions/setup-node@v4
@@ -103,7 +103,7 @@ jobs:
 
       - uses: actions/setup-go@v5
         with:
-          go-version: "1.24"
+          go-version: "1.26.10"
           cache: true
 
       - uses: actions/setup-node@v4
@@ -144,12 +144,15 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           cd build/bin && tar czf xtracsys-editor-linux-x64.tar.gz xtracsys-editor && cd ../..
-          mkdir -p pkg/DEBIAN pkg/usr/bin pkg/usr/share/applications pkg/usr/share/icons/hicolor/512x512/apps
+          mkdir -p pkg/DEBIAN pkg/usr/bin pkg/usr/share/applications
           cp build/bin/xtracsys-editor pkg/usr/bin/
-          cp build/linux/512x512.png pkg/usr/share/icons/hicolor/512x512/apps/xtracsys-editor.png
-          printf 'Package: xtracsys-editor\nVersion: 0.1.0\nSection: editors\nPriority: optional\nArchitecture: amd64\nMaintainer: Xtracsys <dev@xtracsys.invalid>\nDescription: Local-first text and Markdown editor\nDepends: libwebkit2gtk-4.1-0, libgtk-3-0\n' > pkg/DEBIAN/control
+          for size in 16 32 64 128 256 512; do
+            mkdir -p pkg/usr/share/icons/hicolor/${size}x${size}/apps
+            cp build/linux/${size}x${size}.png pkg/usr/share/icons/hicolor/${size}x${size}/apps/xtracsys-editor.png
+          done
+          printf 'Package: xtracsys-editor\nVersion: 0.1.2\nSection: editors\nPriority: optional\nArchitecture: amd64\nInstalled-Size: 20000\nMaintainer: Xtracsys <dev@xtracsys.invalid>\nDescription: Local-first text and Markdown editor\n Byte-faithful plain-text and Markdown editing with live preview.\nDepends: libwebkit2gtk-4.1-0, libgtk-3-0\n' > pkg/DEBIAN/control
           printf '[Desktop Entry]\nType=Application\nName=Xtracsys Editor\nExec=xtracsys-editor\nIcon=xtracsys-editor\nCategories=Development;TextEditor;\n' > pkg/usr/share/applications/xtracsys-editor.desktop
-          dpkg-deb --build pkg build/bin/xtracsys-editor_0.1.0_amd64.deb
+          dpkg-deb --build --root-owner-group pkg build/bin/xtracsys-editor_0.1.2_amd64.deb
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4

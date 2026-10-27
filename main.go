@@ -7,6 +7,7 @@ import (
 	"context"
 	"embed"
 	"os"
+	"path/filepath"
 	goruntime "runtime"
 	"strings"
 
@@ -56,8 +57,17 @@ func main() {
 			UniqueId: "editors.xtracsys.xtracsys-editor",
 			OnSecondInstanceLaunch: func(data options.SecondInstanceData) {
 				// Windows/Linux: a second `open file.exe` launch hands its
-				// arguments to this instance and exits.
-				appSvc.QueueExternalOpen(fileArgs(data.Args))
+				// arguments to this instance and exits. Relative paths belong
+				// to the second instance's working directory.
+				args := make([]string, 0, len(data.Args))
+				for _, a := range data.Args {
+					if a == "" || filepath.IsAbs(a) || strings.HasPrefix(a, "-") {
+						args = append(args, a)
+						continue
+					}
+					args = append(args, filepath.Join(data.WorkingDirectory, a))
+				}
+				appSvc.QueueExternalOpen(fileArgs(args))
 			},
 		},
 		Menu:      buildMenu(appSvc),

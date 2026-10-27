@@ -118,7 +118,9 @@ export interface Backend {
   onMenuAction(cb: (action: string) => void): void;
   onQuitRequest(cb: () => void): void;
   onOpenPaths(cb: (paths: string[]) => void): void;
-  markExternalReady(): Promise<void>;
+  /** Flips to live event delivery; returns any externally queued paths so the
+   * backlog is delivered as the RPC response, never racing event wiring. */
+  markExternalReady(): Promise<string[]>;
 }
 
 /** Filter launch/second-instance arguments down to document paths. */
@@ -178,14 +180,17 @@ export function createBackend(): Backend {
   const evMenu: ((a: string) => void)[] = [];
   const evQuit: (() => void)[] = [];
   const evOpen: ((p: string[]) => void)[] = [];
+  let wired = false;
   const wire = () => {
     const rt = wails().runtime;
-    if (!rt) return;
+    if (!rt || wired) return;
+    wired = true;
     rt.EventsOn("watch:event", (d) => evWatch.forEach((f) => f(d as WatchEvent)));
     rt.EventsOn("menu:action", (d) => evMenu.forEach((f) => f(String(d))));
     rt.EventsOn("app:quit-requested", () => evQuit.forEach((f) => f()));
     rt.EventsOn("open:paths", (d) => evOpen.forEach((f) => f((d as string[]) || [])));
   };
+  wire(); // the injected runtime loads before this module — wire synchronously
   // EventsOn may be injected slightly after first paint; retry lazily.
   const tryWire = setInterval(() => {
     if (wails().runtime) {
@@ -221,7 +226,7 @@ export function createBackend(): Backend {
     onMenuAction: (cb) => evMenu.push(cb),
     onQuitRequest: (cb) => evQuit.push(cb),
     onOpenPaths: (cb) => evOpen.push(cb),
-    markExternalReady: () => call<void>("MarkExternalReady"),
+    markExternalReady: async () => (await call<string[]>("MarkExternalReady")) ?? [],
   };
 }
 
@@ -251,21 +256,26 @@ function createBridgeBackend(): Backend {
     return env.result;
   };
 
-  // EventSource for Go → JS events.
-  const es = new EventSource("/api/events");
-  es.addEventListener("watch:event", (ev) => {
-    const payload = JSON.parse((ev as MessageEvent).data);
-    watch.forEach((f) => f(payload.data as WatchEvent));
-  });
-  es.addEventListener("menu:action", (ev) => {
-    const payload = JSON.parse((ev as MessageEvent).data);
-    menu.forEach((f) => f(String(payload.data)));
-  });
-  es.addEventListener("app:quit-requested", () => quit.forEach((f) => f()));
-  es.addEventListener("open:paths", (ev) => {
-    const payload = JSON.parse((ev as MessageEvent).data);
-    open.forEach((f) => f((payload.data as string[]) || []));
-  });
+  let wired = false;
+  const wireSSE = () => {
+    if (wired) return;
+    wired = true;
+    const es = new EventSource("/api/events");
+    es.addEventListener("watch:event", (ev) => {
+      const payload = JSON.parse((ev as MessageEvent).data);
+      watch.forEach((f) => f(payload.data as WatchEvent));
+    });
+    es.addEventListener("menu:action", (ev) => {
+      const payload = JSON.parse((ev as MessageEvent).data);
+      menu.forEach((f) => f(String(payload.data)));
+    });
+    es.addEventListener("app:quit-requested", () => quit.forEach((f) => f()));
+    es.addEventListener("open:paths", (ev) => {
+      const payload = JSON.parse((ev as MessageEvent).data);
+      open.forEach((f) => f((payload.data as string[]) || []));
+    });
+  };
+  wireSSE();
 
   return {
     appInfo: () => call("AppInfo"),
@@ -293,6 +303,6 @@ function createBridgeBackend(): Backend {
     onMenuAction: (cb) => menu.push(cb),
     onQuitRequest: (cb) => quit.push(cb),
     onOpenPaths: (cb) => open.push(cb),
-    markExternalReady: () => call("MarkExternalReady"),
+    markExternalReady: async () => (await call("MarkExternalReady")) ?? [],
   };
 }

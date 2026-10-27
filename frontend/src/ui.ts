@@ -54,7 +54,11 @@ export function showModal(spec: ModalSpec): Promise<string> {
     overlay.appendChild(modal);
     document.body.appendChild(overlay);
 
+    const isTopmost = () =>
+      document.body.querySelector(".overlay:last-of-type") === overlay ||
+      document.body.lastElementChild === overlay;
     const onKey = (e: KeyboardEvent) => {
+      if (!isTopmost()) return; // stacked modals resolve one at a time
       if (e.key === "Escape") {
         e.preventDefault();
         close(spec.cancelValue ?? "cancel");
@@ -67,7 +71,7 @@ export function showModal(spec: ModalSpec): Promise<string> {
       }
     };
     overlay.addEventListener("mousedown", (e) => {
-      if (e.target === overlay) close(spec.cancelValue ?? "cancel");
+      if (e.target === overlay && isTopmost()) close(spec.cancelValue ?? "cancel");
     });
     document.addEventListener("keydown", onKey, true);
 

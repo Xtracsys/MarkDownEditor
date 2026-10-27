@@ -8,7 +8,7 @@
 
 !define APPNAME "Xtracsys Editor"
 !ifndef VERSION
-  !define VERSION "0.1.1"
+  !define VERSION "0.1.3"
 !endif
 !define PUBLISHER "Xtracsys"
 !define EXENAME "xtracsys-editor.exe"
@@ -30,6 +30,7 @@ RequestExecutionLevel admin
 
 !insertmacro MUI_PAGE_DIRECTORY
 !insertmacro MUI_PAGE_INSTFILES
+!insertmacro MUI_PAGE_FINISH
 !insertmacro MUI_UNPAGE_CONFIRM
 !insertmacro MUI_UNPAGE_INSTFILES
 !insertmacro MUI_LANGUAGE "English"

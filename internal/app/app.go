@@ -337,11 +337,11 @@ func (a *App) SaveTab(tabId, path, content string, eols []string, encoding strin
 	if !ok {
 		return SaveResponse{Ok: false, Message: "Unknown tab; it may have been closed."}
 	}
-	if t.readOnly {
-		return SaveResponse{Ok: false, Message: "This document is read-only (it could not be decoded cleanly). Use Save As to export a UTF-8 copy."}
-	}
 	if path == "" {
 		return SaveResponse{Ok: false, Message: "This document has no filename yet. Use Save As to choose one."}
+	}
+	if t.readOnly && t.path == path {
+		return SaveResponse{Ok: false, Message: "This document is read-only (it could not be decoded cleanly), so saving in place is disabled. Use Save As to export a UTF-8 copy."}
 	}
 	if !fileio.ValidEncoding(encoding) {
 		return SaveResponse{Ok: false, Message: "Internal error: unknown encoding " + encoding}
@@ -367,7 +367,10 @@ func (a *App) SaveTab(tabId, path, content string, eols []string, encoding strin
 	t.path = path
 	t.encoding = encoding
 	t.known = fileio.KnownState{Hash: sr.Hash, Size: sr.Size, ModTimeNanos: sr.ModTimeNanos}
-	refresh := &TabInfo{TabId: t.id, Path: t.path, Encoding: t.encoding, Eols: eols, DefaultEol: t.defaultEol, EolSummary: t.eolSummary, ReadOnly: t.readOnly}
+	if eols == nil {
+		eols = []string{}
+	}
+	refresh := &TabInfo{TabId: t.id, Path: t.path, Encoding: t.encoding, Eols: eols, DefaultEol: t.defaultEol, EolSummary: t.eolSummary, ReadOnly: t.readOnly, Warnings: []string{}}
 	a.mu.Unlock()
 	a.watcher.Rename(tabId, path, fileio.KnownState{Hash: sr.Hash, Size: sr.Size, ModTimeNanos: sr.ModTimeNanos})
 	return SaveResponse{Ok: true, Written: sr.Written, Tab: refresh}
@@ -389,11 +392,15 @@ func (a *App) CloseTab(tabId string) {
 // queue until the frontend is ready, then arrive through one open:paths event
 // and flow through the same open pipeline as the in-app Open dialog.
 func (a *App) QueueExternalOpen(paths []string) {
+	exe, _ := os.Executable()
 	clean := make([]string, 0, len(paths))
 	for _, p := range paths {
 		p = strings.TrimSpace(p)
 		if p == "" || strings.HasPrefix(p, "-") {
 			continue
+		}
+		if exe != "" && (p == exe || filepath.Base(p) == filepath.Base(exe)) {
+			continue // second-instance argv can include the executable itself
 		}
 		clean = append(clean, p)
 	}
@@ -436,17 +443,19 @@ func (a *App) QueueExternalOpenOne(path string) {
 	a.QueueExternalOpen([]string{path})
 }
 
-// MarkExternalReady tells the app the frontend listens for open:paths and
-// flushes anything queued before that.
-func (a *App) MarkExternalReady() {
+// MarkExternalReady flips the app into live event delivery AND returns any
+// externally queued paths directly as its RPC result — the backlog is
+// delivered pull-based so it can never race event-listener wiring.
+func (a *App) MarkExternalReady() []string {
 	a.extMu.Lock()
 	pending := a.extPending
 	a.extPending = nil
 	a.extReady = true
 	a.extMu.Unlock()
-	if len(pending) > 0 {
-		a.emitEvent(EventOpenPaths, pending)
+	if pending == nil {
+		pending = []string{}
 	}
+	return pending
 }
 
 // SnapshotTab stores a crash-recovery snapshot of an unsaved buffer under the
@@ -455,6 +464,12 @@ func (a *App) MarkExternalReady() {
 func (a *App) SnapshotTab(tabId, path, content string, eols []string, encoding string) error {
 	if a.recov == nil {
 		return nil // recovery unavailable; editing still works
+	}
+	a.mu.Lock()
+	_, exists := a.tabs[tabId]
+	a.mu.Unlock()
+	if !exists {
+		return nil // tab closed while a debounced snapshot was in flight
 	}
 	if _, err := fileio.Rebuild(content, eols); err != nil {
 		return err // never snapshot something we could not save faithfully
@@ -473,11 +488,6 @@ func (a *App) ClearRecovery(tabId string) {
 	}
 }
 
-// ListRecovery returns snapshots left behind by a crash or forced quit.
-func (a *App) ListRecoveryTraced() {} // placeholder removed below
-
-// ListRecoveryReal is unused.
-func (a *App) ListRecoveryUnused() {}
 // Nil slices marshal as JSON null, which crashes JS consumers evaluating
 // .length — every slice crossing the binding boundary is materialized.
 func (a *App) ListRecovery() []recovery.Entry {

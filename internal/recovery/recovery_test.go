@@ -72,14 +72,14 @@ func TestCorruptAndForeignFilesIgnored(t *testing.T) {
 	s := newStore(t)
 	s.Save(Entry{ID: "good", Content: "ok"})
 	os.WriteFile(filepath.Join(s.Dir(), "bad.json"), []byte("{not json"), 0o600)
-	os.WriteFile(filepath.Join(s.Dir(), "empty.json"), []byte(`{"id":"e","content":""}`), 0o600) // empty content skipped
+	os.WriteFile(filepath.Join(s.Dir(), "empty.json"), []byte(`{"id":"e","content":""}`), 0o600) // emptied buffer is still recoverable
 	os.WriteFile(filepath.Join(s.Dir(), "notes.txt"), []byte("foreign"), 0o600)
 	got, err := s.List()
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(got) != 1 || got[0].ID != "good" {
-		t.Fatalf("expected only the good entry: %+v", got)
+	if len(got) != 2 {
+		t.Fatalf("expected good + emptied entries: %+v", got)
 	}
 }
 

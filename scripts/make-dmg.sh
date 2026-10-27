@@ -61,5 +61,5 @@ else
   echo "note: Finder automation unavailable — building DMG without icon layout (still drag-installable)"
 fi
 
-hdiutil convert "$TMP_DMG" -format UDZO -o "$OUT_DMG" >/dev/null
+hdiutil convert "$TMP_DMG" -format UDZO -o "$OUT_DMG" -ov >/dev/null
 echo "wrote $OUT_DMG"

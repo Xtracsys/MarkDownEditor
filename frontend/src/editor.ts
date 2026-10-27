@@ -194,4 +194,13 @@ function brandHighlightStyle(theme: "light" | "dark"): HighlightStyle {
   ]);
 }
 
+/** Re-point a state's language after a rename (Save As) without rebuilding
+ * the state, so undo history, cursor, and scroll all survive. */
+export function reconfigureLanguage(state: EditorState, path: string): EditorState {
+  const lang = isMarkdownPath(path)
+    ? markdownLanguage()
+    : null; // async detection would rebuild; non-markdown renames keep prior highlighting
+  return state.update({ effects: langComp.reconfigure(lang ? lang : []) }).state;
+}
+
 export { EditorView };
