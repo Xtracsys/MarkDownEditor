@@ -54,6 +54,7 @@ export class Application {
   private snapshotTimer: number | undefined;
   private previewDebounce: number | undefined;
   private saveInFlight = new Set<string>();
+  private saveCanceled = false;
   private mode: ViewMode = "source";
   private splitRatio = 0.5;
   private quitting = false;
@@ -123,7 +124,13 @@ export class Application {
       // the app to live event delivery. MUST come before offerRecovery:
       // the recovery modal is interactive and must never gate delivery.
       const queued = await this.backend.markExternalReady();
-      if (queued && queued.length) await this.openPaths(queued);
+      if (queued && queued.length) {
+        try {
+          await this.openPaths(queued);
+        } catch (e) {
+          toast("Could not open queued documents", String(e));
+        }
+      }
       await this.offerRecovery();
     } catch (e) {
       this.showFatalStartupError(String(e));
@@ -285,6 +292,7 @@ export class Application {
     const idx = this.tabs.indexOf(tab);
     if (idx >= 0) this.tabs.splice(idx, 1);
     await this.backend.closeTab(tab.info.tabId);
+    this.renderTabs();
   }
 
   // ------------------------------------------------------------------
@@ -318,9 +326,11 @@ export class Application {
   async saveTabAs(tab: Tab): Promise<boolean> {
     const suggested = tab.info.path ? tab.info.path.split("/").pop()! : tab.markdown ? "Untitled.md" : "Untitled.txt";
     const target = await this.backend.pickSaveAsPath(suggested).catch((e) => {
+      this.saveCanceled = true;
       toast("Save dialog unavailable", String(e));
       return "";
     });
+    if (!target) this.saveCanceled = true; // user declined the dialog
     if (!target) return false; // canceled
     if (this.saveInFlight.has(tab.info.tabId)) return false;
     this.saveInFlight.add(tab.info.tabId);
@@ -344,14 +354,16 @@ export class Application {
       tab.extState = "none";
       void this.backend.clearRecovery(tab.info.tabId);
       removeBanner(this.bannerSlot, `ext-${tab.info.tabId}`);
-      const pathChanged = tab.info.path !== path;
+      const oldPath = tab.info.path;
+      const pathChanged = oldPath !== path;
       tab.info.path = resp.tab?.path || path;
+      if (resp.tab) tab.info.readOnly = resp.tab.readOnly;
       await this.backend.setDirty(tab.info.tabId, false);
       if (pathChanged) {
         // Only the language follows the new name — the editor state (undo
         // history, cursor, scroll, EOL field) must survive Save As.
         tab.markdown = isMarkdownPath(tab.info.path);
-        tab.state = reconfigureLanguage(tab.state, tab.info.path);
+        tab.state = reconfigureLanguage(tab.state, oldPath, tab.info.path);
         if (this.active === tab) this.view.setState(tab.state);
         void content;
       }
@@ -382,6 +394,7 @@ export class Application {
       });
       // Note: this.doSave, not saveTab — the original guarded saveTab call is
       // still awaiting this modal, so a re-entrant saveTab would no-op.
+      if (choice === "cancel") this.saveCanceled = true;
       if (choice === "overwrite") {
         const ok = await this.doSave(tab, tab.info.path, true);
         if (ok && this.active === tab) this.renderTabs();
@@ -734,8 +747,12 @@ export class Application {
       for (const tab of dirty) {
         let ok = false;
         for (let attempt = 0; attempt < 3 && !ok; attempt++) {
+          this.saveCanceled = false;
           ok = await this.saveTab(tab);
-          if (!ok && tab.dirty) await new Promise((r) => setTimeout(r, 150));
+          if (!ok && tab.dirty && !this.saveCanceled) {
+            await new Promise((r) => setTimeout(r, 150));
+          }
+          if (this.saveCanceled) break; // a declined dialog is an answer, not an error
         }
         if (!ok && tab.dirty) {
           toast("Quit canceled", "Not all documents could be saved.");
@@ -906,7 +923,13 @@ export class Application {
       if (!tab.dirty || !tab.info.path || tab.info.readOnly) continue;
       if (tab.extState === "changed" || tab.extState === "deleted") continue;
       if (this.saveInFlight.has(tab.info.tabId)) continue;
-      const ok = await this.doSave(tab, tab.info.path, false, true);
+      this.saveInFlight.add(tab.info.tabId);
+      let ok: boolean;
+      try {
+        ok = await this.doSave(tab, tab.info.path, false, true);
+      } finally {
+        this.saveInFlight.delete(tab.info.tabId);
+      }
       if (!ok && tab.dirty) {
         // A failed auto-save stops the timer for this session tick; the user
         // sees the failure toast and decides.

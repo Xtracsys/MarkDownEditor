@@ -12,7 +12,7 @@ import {
 } from "@codemirror/state";
 import {
   EditorView, keymap, highlightSpecialChars, drawSelection, dropCursor,
-  rectangularSelection, crosshairCursor, tooltips,
+  rectangularSelection, crosshairCursor,
   lineNumbers, highlightActiveLine,
 } from "@codemirror/view";
 import { defaultKeymap, history, historyKeymap, indentWithTab } from "@codemirror/commands";
@@ -121,7 +121,6 @@ export async function makeState(opts: CreateStateOptions): Promise<EditorState> 
       ]),
       opts.extraKeys ?? [],
       highlightSelectionMatches(),
-      tooltips({ parent: document.body }),
       langComp.of(lang ? lang : []),
       wrapComp.of(settings.wordWrap ? EditorView.lineWrapping : []),
       tabComp.of([
@@ -195,12 +194,15 @@ function brandHighlightStyle(theme: "light" | "dark"): HighlightStyle {
 }
 
 /** Re-point a state's language after a rename (Save As) without rebuilding
- * the state, so undo history, cursor, and scroll all survive. */
-export function reconfigureLanguage(state: EditorState, path: string): EditorState {
-  const lang = isMarkdownPath(path)
-    ? markdownLanguage()
-    : null; // async detection would rebuild; non-markdown renames keep prior highlighting
-  return state.update({ effects: langComp.reconfigure(lang ? lang : []) }).state;
+ * the state, so undo history, cursor, and scroll all survive. Only a change
+ * in markdown-ness reconfigures; other renames keep the current language
+ * (async re-detection would cost the state). */
+export function reconfigureLanguage(state: EditorState, oldPath: string, newPath: string): EditorState {
+  const wasMd = isMarkdownPath(oldPath);
+  const isMd = isMarkdownPath(newPath);
+  if (wasMd === isMd) return state;
+  const lang = isMd ? markdownLanguage() : [];
+  return state.update({ effects: langComp.reconfigure(lang) }).state;
 }
 
 export { EditorView };

@@ -117,9 +117,12 @@ func (s *Store) List() ([]Entry, error) {
 		if de.IsDir() {
 			continue
 		}
-		// Sweep crash-orphaned temp files.
+		// Sweep crash-orphaned temp files — but only stale ones, so an
+		// in-flight snapshot write is never unlinked mid-save.
 		if strings.HasSuffix(de.Name(), ".tmp") {
-			os.Remove(filepath.Join(s.dir, de.Name()))
+			if info, ierr := de.Info(); ierr == nil && time.Since(info.ModTime()) > 5*time.Minute {
+				os.Remove(filepath.Join(s.dir, de.Name()))
+			}
 			continue
 		}
 		if !strings.HasSuffix(de.Name(), ".json") {

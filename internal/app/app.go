@@ -399,8 +399,10 @@ func (a *App) QueueExternalOpen(paths []string) {
 		if p == "" || strings.HasPrefix(p, "-") {
 			continue
 		}
-		if exe != "" && (p == exe || filepath.Base(p) == filepath.Base(exe)) {
-			continue // second-instance argv can include the executable itself
+		// Second-instance argv can include the executable itself. Full-path
+		// comparison only — a document may legitimately share the basename.
+		if exe != "" && strings.EqualFold(p, exe) {
+			continue
 		}
 		clean = append(clean, p)
 	}
