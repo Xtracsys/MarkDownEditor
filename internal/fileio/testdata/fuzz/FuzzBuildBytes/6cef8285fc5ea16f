@@ -1,0 +1,4 @@
+go test fuzz v1
+string("\xa3\n")
+byte('\a')
+string("\n\x00")

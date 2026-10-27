@@ -120,6 +120,59 @@ corrupting beyond a new boundary. Low-severity fixes applied:
   Document opens, settings, and the recovery flow are verified end-to-end in
   the real macOS app via opt-in diagnostics (XTRACSYS_EDITOR_DEBUG=1).
 
+## Dynamic security testing (added after the static audits)
+
+Static review found the design; this round *attacked* the running
+application. Three instruments, all repeatable from the repository:
+
+1. **Go fuzzing** (`internal/fileio/fuzz_test.go`) — three property-based
+   fuzzers hammering the byte-integrity engine:
+   - `FuzzParseEols`: 27.5M executions — lines+terminators always rebuild
+     the exact input; `ToLF`+`Rebuild` round-trips under arbitrary bytes.
+   - `FuzzUTF16RoundTrip`: 31.5M executions — decode/encode/decode is
+     idempotent for every input, including lone surrogates and odd bytes.
+   - `FuzzBuildBytes`: 90s at full rate — whenever a save encodes
+     successfully, loading it back yields the identical content. (Two early
+     "failures" were property bugs in the harness itself: the fuzzer
+     constructed editor states unreachable from real JS strings; the
+     property now models the actual contract.)
+
+2. **XSS battery through the live preview pipeline**
+   (`tests/e2e/security.spec.ts`) — 26 attack vectors (inline scripts, event
+   handlers on 8 elements, SVG/math/noscript mXSS, srcset, form machinery,
+   javascript:/vbscript:/data:text links including tab- and
+   entity-encoded variants, remote tracking images, data-URI SVG) rendered
+   through marked+DOMPurify into the real sandboxed iframe. Assertions:
+   zero dialogs, zero page errors, zero dangerous elements, zero inline
+   handlers, no `evil.example` anywhere in DOM or network, remote images
+   replaced by visible blocked-notes, external anchors carry no live href,
+   clicking every link in the battery causes zero navigations, and refused
+   schemes (mailto/tel) surface as toasts without navigating. **21/21
+   tests pass.**
+
+3. **Live HTTP attack suite against the app's only network listener**
+   (`scripts/security-dynamic.mjs` against `cmd/e2e-serve`) — 19 checks:
+   cross-origin POST refused (403), spoofed Host refused (403,
+   DNS-rebinding), wrong Content-Type refused (415), GET refused (405),
+   path traversal on /api and via OpenPaths refused/explained, /ximg
+   traversal in raw/encoded/double-encoded/absolute forms all contained,
+   malformed JSON rejected, 5 MB payloads tolerated without crashing,
+   unknown methods error-cleanly, and a legitimate save still works after
+   the barrage. **19/19 checks pass.**
+
+   This suite earned its keep immediately: it caught that the request guard
+   had been dropped from the handler during later bridge edits (its unit
+   test still passed because it tested the function, not the wiring), and
+   that the same guard then over-rejected same-origin POSTs — browsers
+   attach Origin to all non-GET requests, so the guard now allows exactly
+   the app's own origin and rejects everything else (both regressions
+   covered by `guard_test.go`).
+
+**Dynamic-verdict:** no execution, navigation, exfiltration, or corruption
+path found against the running application. Dependency scan refreshed:
+govulncheck 0 vulnerabilities (Go 1.26.10 toolchain), npm production tree 0
+vulnerabilities.
+
 ## Residual risks (stated plainly)
 
 1. The check→rename race narrowed to one read (F4) cannot be fully closed

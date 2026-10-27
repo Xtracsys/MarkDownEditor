@@ -17,6 +17,7 @@ func TestGuardRejectsCrossOrigin(t *testing.T) {
 		want   int // 0 = allowed
 	}{
 		{"same-origin fetch", "", "127.0.0.1:34120", "application/json", 0},
+		{"same-origin POST carries Origin", "http://127.0.0.1:34120", "127.0.0.1:34120", "application/json", 0},
 		{"cross-site page", "https://evil.example", "127.0.0.1:34120", "text/plain", 403},
 		{"origin only", "https://evil.example", "127.0.0.1:34120", "application/json", 403},
 		{"dns rebinding", "", "evil.example:34120", "application/json", 403},

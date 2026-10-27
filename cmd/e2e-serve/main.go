@@ -51,7 +51,11 @@ func main() {
 // refused. Content-Type must be JSON, which forces a CORS preflight for
 // cross-site browsers even before the Origin check.
 func guard(w http.ResponseWriter, r *http.Request, addr string) bool {
-	if r.Header.Get("Origin") != "" {
+	// Browsers attach Origin to every non-GET/HEAD request, including
+	// same-origin ones — so our own page's POSTs carry http://<addr>. Only a
+	// DIFFERENT origin is an attack (the DNS-rebinding Host check below
+	// already pins the true host).
+	if origin := r.Header.Get("Origin"); origin != "" && origin != "http://"+addr {
 		http.Error(w, "cross-origin requests are not accepted", http.StatusForbidden)
 		return false
 	}
@@ -102,6 +106,9 @@ func serve(addr, dist, home string, fresh bool) error {
 	mux.HandleFunc("/api/", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
 			http.Error(w, "POST only", http.StatusMethodNotAllowed)
+			return
+		}
+		if !guard(w, r, addr) {
 			return
 		}
 		method := r.URL.Path[len("/api/"):]
