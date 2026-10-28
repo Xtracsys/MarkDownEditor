@@ -173,6 +173,18 @@ path found against the running application. Dependency scan refreshed:
 govulncheck 0 vulnerabilities (Go 1.26.10 toolchain), npm production tree 0
 vulnerabilities.
 
+## Round 4 — delta audit of the 0.1.5 features
+
+Two fresh audits over the session/recent/convert/outline/paste/reveal/print
+code: no high or medium security findings. `WriteImageFile` containment is
+provable (charset-restricted names, fixed extension, O_EXCL never-overwrite
+writes), the menu action round-trip is injection-proof, session.json is
+0600/atomic/tamper-tolerant. Fixed from the round: Normalize's
+trailing-terminator corruption (a file now keeps its own final-newline
+state), the image-name dialog honoring user input, host-pinning the
+bridge's SSE + image routes, RevealPath refusing flag-like paths, and a
+mutex for the session store. Full findings in the repository history.
+
 ## Residual risks (stated plainly)
 
 1. The check→rename race narrowed to one read (F4) cannot be fully closed
