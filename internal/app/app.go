@@ -203,6 +203,12 @@ func (a *App) SaveSessionNow() {
 		return
 	}
 	a.mu.Lock()
+	restore := a.settings.RestoreSession
+	a.mu.Unlock()
+	if !restore {
+		return // the user turned session persistence off
+	}
+	a.mu.Lock()
 	paths := make([]string, 0, len(a.tabs))
 	for _, t := range a.tabs {
 		if t.path != "" {
@@ -211,6 +217,11 @@ func (a *App) SaveSessionNow() {
 	}
 	a.mu.Unlock()
 	_ = a.sess.SaveLastSession(paths)
+}
+
+// SessionSetter exposes the session store to the test harness (nil-safe).
+func (a *App) SessionSetter() *session.Store {
+	return a.sess
 }
 
 // GetLastSession returns the previously recorded session's existing paths,
@@ -252,6 +263,9 @@ func (a *App) ClearRecentFiles() {
 // RevealPath shows the file in the OS file manager (Finder/Explorer).
 // Returns an empty string on success, else a user-readable message.
 func (a *App) RevealPath(path string) string {
+	if strings.HasPrefix(path, "-") {
+		return "Refused to reveal " + path
+	}
 	if _, err := os.Stat(path); err != nil {
 		return "File not found: " + path
 	}
@@ -284,7 +298,7 @@ func (a *App) WriteImageFile(tabId, name, base64Data string) (string, error) {
 	if t.path == "" {
 		return "", fmt.Errorf("save the document first so the image has a destination")
 	}
-	if len(base64Data) > 27*1024*1024 { // ~20 MB decoded
+	if len(base64Data) > 20*1024*1024/3*4 { // base64 of the 20 MB serve cap
 		return "", fmt.Errorf("image exceeds the 20 MB limit")
 	}
 	data, err := base64.StdEncoding.DecodeString(base64Data)
@@ -318,10 +332,21 @@ func (a *App) WriteImageFile(tabId, name, base64Data string) (string, error) {
 			candidate = fmt.Sprintf("%s-%d%s", base, attempt, ext)
 		}
 		full := filepath.Join(dir, candidate)
-		if _, err := os.Stat(full); err == nil {
-			continue
+		// O_EXCL: never overwrite, never follow a pre-planted symlink.
+		f, err := os.OpenFile(full, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o644)
+		if err != nil {
+			if os.IsExist(err) {
+				continue
+			}
+			return "", fmt.Errorf("could not write the image: %v", err)
 		}
-		if err := os.WriteFile(full, data, 0o644); err != nil {
+		if _, err := f.Write(data); err != nil {
+			f.Close()
+			os.Remove(full)
+			return "", fmt.Errorf("could not write the image: %v", err)
+		}
+		if err := f.Close(); err != nil {
+			os.Remove(full)
 			return "", fmt.Errorf("could not write the image: %v", err)
 		}
 		return candidate, nil

@@ -313,6 +313,15 @@ func dispatch(a *app.App, method string, args []json.RawMessage) (interface{}, e
 	case "ClearSession":
 		a.ClearSession()
 		return nil, nil
+	case "_SetSession": // test hook: set the session to exactly these paths
+		var paths []string
+		if err := dec(0, &paths); err != nil {
+			return nil, err
+		}
+		if a.SessionSetter() != nil {
+			_ = a.SessionSetter().SaveLastSession(paths)
+		}
+		return nil, nil
 	case "SaveSessionNow":
 		a.SaveSessionNow()
 		return nil, nil

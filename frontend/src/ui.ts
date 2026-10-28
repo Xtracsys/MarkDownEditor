@@ -53,6 +53,11 @@ export function showModal(spec: ModalSpec): Promise<string> {
     modal.append(head, body, foot);
     overlay.appendChild(modal);
     document.body.appendChild(overlay);
+    // Move focus into the dialog: keyboard input goes to the modal, not the
+    // editor behind the overlay (Enter/Escape then act on the dialog only).
+    const primaryBtn = foot.querySelector(".btn.primary") as HTMLButtonElement | null;
+    setTimeout(() => (primaryBtn ?? modal).focus(), 0);
+    modal.tabIndex = -1;
 
     const isTopmost = () =>
       document.body.querySelector(".overlay:last-of-type") === overlay ||

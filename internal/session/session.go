@@ -11,6 +11,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"sync"
 )
 
 const maxRecent = 10
@@ -21,6 +22,7 @@ type Data struct {
 }
 
 type Store struct {
+	mu   sync.Mutex
 	file string
 }
 
@@ -32,6 +34,12 @@ func New(base string) (*Store, error) {
 }
 
 func (s *Store) load() Data {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.loadLocked()
+}
+
+func (s *Store) loadLocked() Data {
 	var d Data
 	if data, err := os.ReadFile(s.file); err == nil {
 		_ = json.Unmarshal(data, &d)
@@ -46,6 +54,12 @@ func (s *Store) load() Data {
 }
 
 func (s *Store) save(d Data) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.saveLocked(d)
+}
+
+func (s *Store) saveLocked(d Data) error {
 	data, err := json.MarshalIndent(d, "", "  ")
 	if err != nil {
 		return err
@@ -95,10 +109,15 @@ func (s *Store) AddRecent(path string) error {
 	return s.save(d)
 }
 
-// LoadRecent returns the recent list, most recent first. Missing files are
-// kept (menus gray out naturally) — the caller decides presentation.
+// LoadRecent returns the recent list, most recent first, capped. Missing
+// files are kept (menus gray out naturally) — the caller decides
+// presentation.
 func (s *Store) LoadRecent() []string {
-	return s.load().Recent
+	d := s.load()
+	if len(d.Recent) > maxRecent {
+		d.Recent = d.Recent[:maxRecent]
+	}
+	return d.Recent
 }
 
 // ClearRecent empties the recent list.

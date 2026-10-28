@@ -485,6 +485,7 @@ export class Application {
     // External-change banners describe one tab: drop them all on switch.
     this.bannerSlot.querySelectorAll('[data-banner^="ext-"]').forEach((el) => el.remove());
     this.active = tab;
+    if (this.outlineVisible) this.renderOutline(); // per-tab headings, never stale
     this.view.setState(tab.state);
     this.mode = tab.mode;
     this.empty.classList.add("hidden");
@@ -870,7 +871,7 @@ export class Application {
       else if (mod && !inField && e.key.toLowerCase() === "n") { e.preventDefault(); void this.newTab(); }
       else if (mod && !inField && e.key.toLowerCase() === "w") { e.preventDefault(); void this.closeActiveTab(); }
       else if (mod && e.key === ",") { e.preventDefault(); void this.openSettings(); }
-      else if (mod && e.key.toLowerCase() === "p") { e.preventDefault(); this.printPreview(); }
+      else if (mod && !inField && e.key.toLowerCase() === "p") { e.preventDefault(); this.printPreview(); }
       else if (mod && !inField && e.key.toLowerCase() === "q") { e.preventDefault(); void this.onQuitRequest(); }
       else if (e.altKey && !mod) {
         if (e.key === "1") { e.preventDefault(); this.setMode("source"); }
@@ -971,6 +972,7 @@ export class Application {
       // Never auto-save untitled documents, read-only documents, or tabs with
       // unresolved external changes (no silent overwrites, ever).
       if (!tab.dirty || !tab.info.path || tab.info.readOnly) continue;
+      if (tab.encodingDirty) continue; // a conversion waits for the user's Save
       if (tab.extState === "changed" || tab.extState === "deleted") continue;
       if (this.saveInFlight.has(tab.info.tabId)) continue;
       this.saveInFlight.add(tab.info.tabId);
@@ -1017,11 +1019,10 @@ export class Application {
       }
       try {
         const finalName = await this.backend.writeImageFile(
-          tab.info.tabId, suggested, btoa(binary),
+          tab.info.tabId, name, btoa(binary),
         );
         const sel = tab.state.selection.main;
-        tab.state = tab.state.update({ changes: { from: sel.from, insert: `![${finalName}](${finalName})` } }).state;
-        if (this.active === tab) this.view.setState(tab.state);
+        this.view.dispatch({ changes: { from: sel.from, insert: `![${finalName}](${finalName})` } });
         this.forceDirty(tab);
         toast("Image saved", `${finalName} written next to the document and referenced.`);
       } catch (err) {
@@ -1067,7 +1068,13 @@ export class Application {
       menu.style.left = `${Math.min(e.clientX, window.innerWidth - rect.width - 8)}px`;
       menu.style.top = `${Math.min(e.clientY, window.innerHeight - rect.height - 8)}px`;
       setTimeout(() => {
-        window.addEventListener("mousedown", () => menu.remove(), { once: true });
+        window.addEventListener(
+          "mousedown",
+          (ev) => {
+            if (!menu.contains(ev.target as Node)) menu.remove();
+          },
+          { once: true },
+        );
       });
     });
   }
@@ -1205,17 +1212,22 @@ export class Application {
   private async normalizeLineEndings() {
     const tab = this.active;
     if (!tab) return;
-    const target = (tab.state.field(eolField)[0] as Eol | undefined) ?? tab.info.defaultEol ?? DEFAULT_EOL;
-    const label = target === "\r\n" ? "CRLF (Windows)" : target === "\r" ? "CR (classic Mac)" : "LF (Unix)";
     const eols = tab.state.field(eolField);
-    const uniform = eols.every((e) => e === target);
-    if (uniform && eols[eols.length - 1] === "") {
+    // The final line never carries a terminator (the trailing entry is "").
+    // Normalize target: the file's own predominant style.
+    const target = (eols.find((e) => e !== "") as Eol | undefined) ?? tab.info.defaultEol ?? DEFAULT_EOL;
+    const label = target === "\r\n" ? "CRLF (Windows)" : target === "\r" ? "CR (classic Mac)" : "LF (Unix)";
+    const body = eols.slice(0, -1); // terminators that precede the final line
+    const alreadyUniform = body.length > 0 && body.every((e) => e === target);
+    if (alreadyUniform) {
       toast("Already uniform", `Every line already ends with ${label}.`);
       return;
     }
     const choice = await showModal({
       title: "Normalize line endings",
-      body: `Rewrite every line ending in “${tab.fileName()}” to ${label}?\n\nThe document is marked as modified and saved when YOU choose Save — the file on disk is not touched until then.`,
+      body: `Rewrite every line ending in “${tab.fileName()}” to ${label}?\n\n` +
+        "Only the endings of existing line breaks are rewritten — a missing final newline is not added. " +
+        "The document is marked as modified and saved when YOU choose Save — the file on disk is not touched until then. This change is not undoable with ⌘Z.",
       buttons: [
         { label: "Normalize", value: "norm", primary: true },
         { label: "Cancel", value: "cancel" },
@@ -1223,17 +1235,17 @@ export class Application {
       cancelValue: "cancel",
     });
     if (choice !== "norm") return;
-    const count = tab.state.doc.lines;
-    tab.state = tab.state.update({ effects: setEolsEffect.of(new Array(count).fill(target)) }).state;
-    if (this.active === tab) this.view.setState(tab.state);
-    // Recompute the display facts locally — the file on disk is unchanged
-    // until the user saves.
+    // Preserve the trailing "" entry — the final line has no terminator.
+    const next = eols.map((_, i) => (i === eols.length - 1 ? "" : target));
+    // Route through the view so the shared update listener runs (preview,
+    // autosave timer, snapshot, outline).
+    this.view.dispatch({ effects: setEolsEffect.of(next) });
     const summary = target === "\r\n" ? "crlf" : target === "\r" ? "cr" : "lf";
     tab.info.eolSummary = summary;
     tab.info.defaultEol = target;
     this.forceDirty(tab);
     this.refreshStatus();
-    toast("Normalized", `All ${count} line endings set to ${label}. Save to write the file.`);
+    toast("Normalized", `All line endings set to ${label}. Save to write the file.`);
   }
 
   /** Mark a tab dirty for non-text changes (encoding/EOL conversions). */

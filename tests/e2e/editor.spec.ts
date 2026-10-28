@@ -469,17 +469,16 @@ test("session restore reopens the last session's documents", async ({ page }) =>
   await openApp(page);
   await resetSettings(page);
   await openFile(page, file);
-  // Simulate a graceful quit's session snapshot.
-  await page.evaluate(async () => {
-    await fetch("/api/SaveSessionNow", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ args: [] }) });
-    // Clear stale recovery snapshots from earlier tests so the offer modal
-    // does not race this assertion.
+  // Set the session to exactly this file (deterministic regardless of
+  // earlier tests) and clear stale recovery snapshots.
+  await page.evaluate(async (p) => {
+    await fetch("/api/_SetSession", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ args: [[p]] }) });
     const list = await (await fetch("/api/ListRecovery", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ args: [] }) })).json();
     const ids = (list.result || []).map((e: { id: string }) => e.id);
     if (ids.length) {
       await fetch("/api/DiscardRecovery", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ args: [ids] }) });
     }
-  });
+  }, file);
   await page.reload();
   await page.waitForFunction(() => !!(window as never as { __xe?: unknown }).__xe);
   await page.waitForTimeout(1500); // startup: recovery check + session restore
@@ -495,19 +494,17 @@ test("restore-session setting controls whether the session reopens", async ({ pa
   await openApp(page);
   await resetSettings(page);
   await openFile(page, file);
-  await page.evaluate(async () => {
-    await fetch("/api/SaveSessionNow", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ args: [] }) });
+  await page.evaluate(async (p) => {
+    await fetch("/api/_SetSession", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ args: [[p]] }) });
     const list = await (await fetch("/api/ListRecovery", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ args: [] }) })).json();
     const ids = (list.result || []).map((e: { id: string }) => e.id);
     if (ids.length) {
       await fetch("/api/DiscardRecovery", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ args: [ids] }) });
     }
-  });
-  await page.evaluate(async () => {
     const w = window as never as { __xe: { app: { getSettings(): Promise<Record<string, unknown>>; updateSettings(s: Record<string, unknown>): Promise<void> } } };
     const s = await w.__xe.app.getSettings();
     await w.__xe.app.updateSettings({ ...s, restoreSession: false });
-  });
+  }, file);
   // The reload must not race the settings write: poll until the BACKEND
   // reports restoreSession=false, then boot is deterministic.
   await expect
@@ -560,7 +557,9 @@ test("normalize line endings converts mixed endings to the predominant style on 
     void (window as never as { __xe: { app: { saveActive(): Promise<boolean> } } }).__xe.app.saveActive(),
   );
   await page.waitForTimeout(400);
-  expect(bytes(file)).toBe("a\r\nb\r\nc\r\n"); // every line normalized to CRLF
+  // Normalization rewrites existing line breaks only — the missing final
+  // newline is faithfully preserved.
+  expect(bytes(file)).toBe("a\r\nb\r\nc");
 });
 
 test("convert to UTF-8 re-encodes the file on save", async ({ page }) => {
