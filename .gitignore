@@ -24,3 +24,6 @@ Thumbs.db
 # Coverage
 *.out
 internal/app/buildstamp_gen.go
+
+# stray local build outputs
+e2e-serve

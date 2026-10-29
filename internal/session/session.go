@@ -72,14 +72,17 @@ func (s *Store) saveLocked(d Data) error {
 }
 
 // SaveLastSession overwrites the recorded session with the given paths
-// (order preserved). An empty list is a valid result (fresh start).
+// (order preserved). An empty list is a valid result (fresh start). The
+// whole load-modify-save cycle holds the lock.
 func (s *Store) SaveLastSession(paths []string) error {
-	d := s.load()
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	d := s.loadLocked()
 	if paths == nil {
 		paths = []string{}
 	}
 	d.LastSession = paths
-	return s.save(d)
+	return s.saveLocked(d)
 }
 
 // LoadLastSession returns the recorded session, dropping paths that no
@@ -126,9 +129,11 @@ func (s *Store) LoadRecent() []string {
 	return d.Recent
 }
 
-// ClearRecent empties the recent list.
+// ClearRecent empties the recent list. Lock held across the cycle.
 func (s *Store) ClearRecent() error {
-	d := s.load()
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	d := s.loadLocked()
 	d.Recent = []string{}
-	return s.save(d)
+	return s.saveLocked(d)
 }

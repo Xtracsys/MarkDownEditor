@@ -54,6 +54,10 @@ export async function openSettingsModal(current: AppSettings): Promise<AppSettin
       ...toggle("Auto-save", "Off by default. When on, named files save after the idle delay below. Untitled documents are never auto-saved, and files changed on disk are never auto-overwritten.",
         current.autoSaveEnabled, (v) => (draft.autoSaveEnabled = v)),
     },
+    {
+      ...toggle("Restore session on launch", "Reopens the documents that were open when you last quit. Paths only, stored in this app's private data folder; turning it off also erases the recorded session.",
+        current.restoreSession, (v) => (draft.restoreSession = v)),
+    },
   ];
 
   const delayInput = document.createElement("input");
@@ -163,10 +167,17 @@ export async function openSettingsModal(current: AppSettings): Promise<AppSettin
   modal.append(head, body, foot);
   overlay.appendChild(modal);
   document.body.appendChild(overlay);
+  // Inert background while the dialog is open — keyboard input cannot reach
+  // the editor behind the overlay, and Tab cannot escape the dialog.
+  const appRoot = document.getElementById("app");
+  if (appRoot) appRoot.inert = true;
+  const saveBtn = foot.querySelector(".btn.primary") as HTMLButtonElement | null;
+  setTimeout(() => (saveBtn ?? modal).focus(), 0);
 
   return new Promise((resolve) => {
     const close = (result: AppSettings | null) => {
       overlay.remove();
+      if (appRoot && !document.querySelector(".overlay")) appRoot.inert = false;
       document.removeEventListener("keydown", onKey, true);
       resolve(result);
     };
