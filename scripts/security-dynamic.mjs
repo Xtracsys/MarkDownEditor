@@ -105,6 +105,32 @@ async function ximg(path, headers = {}) {
   );
 }
 
+// --- 2b. Host pin on SSE + image routes (live, through the mux) -----------
+{
+  const status = await new Promise((resolve) => {
+    const req = http.request(
+      { host: host.split(":")[0], port: Number(host.split(":")[1]), path: "/api/events",
+        method: "GET", headers: { Host: "evil.example:34128" } },
+      (res) => { resolve(res.statusCode); res.resume(); },
+    );
+    req.on("error", () => resolve(-1));
+    req.end();
+  });
+  record("SSE route host-pinned", status === 403, `status ${status}`);
+}
+{
+  const status = await new Promise((resolve) => {
+    const req = http.request(
+      { host: host.split(":")[0], port: Number(host.split(":")[1]), path: "/ximg/t1/pic.png",
+        method: "GET", headers: { Host: "evil.example:34128" } },
+      (res) => { resolve(res.statusCode); res.resume(); },
+    );
+    req.on("error", () => resolve(-1));
+    req.end();
+  });
+  record("image route host-pinned", status === 403, `status ${status}`);
+}
+
 // --- 3. /ximg/ containment (live) -----------------------------------------
 {
   const r = await ximg("/ximg/t1/../../../etc/passwd");

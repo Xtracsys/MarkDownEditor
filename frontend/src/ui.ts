@@ -53,9 +53,12 @@ export function showModal(spec: ModalSpec): Promise<string> {
     modal.append(head, body, foot);
     overlay.appendChild(modal);
     document.body.appendChild(overlay);
-    // Move focus into the dialog: keyboard input goes to the modal, not the
-    // editor behind the overlay (Enter/Escape then act on the dialog only).
+    // Move focus into the dialog and make the app background inert: keyboard
+    // input goes to the modal, never to the editor behind the overlay
+    // (Enter/Escape then act on the dialog only, Tab cannot escape).
     const primaryBtn = foot.querySelector(".btn.primary") as HTMLButtonElement | null;
+    const appRoot = document.getElementById("app");
+    if (appRoot) appRoot.inert = true;
     setTimeout(() => (primaryBtn ?? modal).focus(), 0);
     modal.tabIndex = -1;
 
@@ -83,6 +86,8 @@ export function showModal(spec: ModalSpec): Promise<string> {
     function close(value: string) {
       document.removeEventListener("keydown", onKey, true);
       overlay.remove();
+      const appRoot = document.getElementById("app");
+      if (appRoot && !document.querySelector(".overlay")) appRoot.inert = false;
       resolve(value);
     }
   });

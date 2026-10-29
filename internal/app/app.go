@@ -227,8 +227,11 @@ func (a *App) SessionSetter() *session.Store {
 // GetLastSession returns the previously recorded session's existing paths,
 // or an empty list when session restore is disabled.
 func (a *App) GetLastSession() []string {
-	a.debugLog("GetLastSession", a.settings.RestoreSession)
-	if !a.settings.RestoreSession {
+	a.mu.Lock()
+	restore := a.settings.RestoreSession
+	a.mu.Unlock()
+	a.debugLog("GetLastSession", restore)
+	if !restore {
 		return []string{}
 	}
 	if a.sess == nil {
@@ -786,6 +789,10 @@ func (a *App) PutSettings(s settings.Settings) error {
 	a.mu.Lock()
 	a.settings = s
 	a.mu.Unlock()
+	if !s.RestoreSession && a.sess != nil {
+		// Opting out is also an erasure: the recorded session is discarded.
+		_ = a.sess.SaveLastSession([]string{})
+	}
 	return nil
 }
 

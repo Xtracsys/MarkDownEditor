@@ -185,6 +185,23 @@ state), the image-name dialog honoring user input, host-pinning the
 bridge's SSE + image routes, RevealPath refusing flag-like paths, and a
 mutex for the session store. Full findings in the repository history.
 
+## Round 5 — delta audit of the 0.1.5 features + hardening
+
+Two fresh audits over the session/recent/convert/outline/paste/reveal/print
+code: no high findings. One medium caught — **the round-4 "host-pinned SSE +
+image routes" fix existed only in documentation**: `/api/events` and
+`/ximg/` had never actually been wired (the same wiring-vs-function class
+round 3's dynamic suite caught; the unit test tested the function, not the
+route). Fixed with a named `pinned()` middleware, live route-level tests in
+the attack suite (spoofed Host → 403 on both routes; 21/21 checks), and this
+document corrected. Also fixed from the round: `GetLastSession` now reads
+the settings flag under the App mutex, the session store's
+load-modify-save cycle is atomic, opting out of RestoreSession erases the
+recorded session (and the settings row exists), the modal focus trap makes
+the app background inert while a dialog is open, and Normalize no-ops
+cleanly on single-line files. WriteImageFile's O_EXCL rewrite and the
+session store hardening verified correct. Scanners re-run: 0 findings.
+
 ## Residual risks (stated plainly)
 
 1. The check→rename race narrowed to one read (F4) cannot be fully closed

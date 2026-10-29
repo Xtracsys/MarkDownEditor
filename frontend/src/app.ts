@@ -1218,7 +1218,11 @@ export class Application {
     const target = (eols.find((e) => e !== "") as Eol | undefined) ?? tab.info.defaultEol ?? DEFAULT_EOL;
     const label = target === "\r\n" ? "CRLF (Windows)" : target === "\r" ? "CR (classic Mac)" : "LF (Unix)";
     const body = eols.slice(0, -1); // terminators that precede the final line
-    const alreadyUniform = body.length > 0 && body.every((e) => e === target);
+    if (body.length === 0) {
+      toast("Nothing to normalize", "A single line has no line endings to rewrite.");
+      return;
+    }
+    const alreadyUniform = body.every((e) => e === target);
     if (alreadyUniform) {
       toast("Already uniform", `Every line already ends with ${label}.`);
       return;

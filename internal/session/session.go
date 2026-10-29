@@ -92,13 +92,19 @@ func (s *Store) LoadLastSession() []string {
 			out = append(out, p)
 		}
 	}
+	if len(out) > maxRecent {
+		out = out[:maxRecent]
+	}
 	return out
 }
 
 // AddRecent moves path to the front of the recent list (deduplicated,
-// capped at maxRecent).
+// capped at maxRecent). The whole load-modify-save cycle holds the lock so
+// concurrent callers cannot lose entries.
 func (s *Store) AddRecent(path string) error {
-	d := s.load()
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	d := s.loadLocked()
 	out := []string{path}
 	for _, p := range d.Recent {
 		if p != path && len(out) < maxRecent {
@@ -106,7 +112,7 @@ func (s *Store) AddRecent(path string) error {
 		}
 	}
 	d.Recent = out
-	return s.save(d)
+	return s.saveLocked(d)
 }
 
 // LoadRecent returns the recent list, most recent first, capped. Missing

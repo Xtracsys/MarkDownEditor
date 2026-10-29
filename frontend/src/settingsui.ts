@@ -224,12 +224,16 @@ export async function imageNameDialog(suggested: string): Promise<string | null>
   modal.append(head, body, foot);
   overlay.appendChild(modal);
   document.body.appendChild(overlay);
+  const appRoot = document.getElementById("app");
+  if (appRoot) appRoot.inert = true;
   input.focus();
   input.select();
 
   return new Promise((resolve) => {
     const close = (v: string | null) => {
       overlay.remove();
+      const appRoot = document.getElementById("app");
+      if (appRoot && !document.querySelector(".overlay")) appRoot.inert = false;
       document.removeEventListener("keydown", onKey, true);
       resolve(v);
     };

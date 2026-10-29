@@ -84,6 +84,7 @@ func serve(addr, dist, home string, fresh bool) error {
 	}
 
 	appSvc := app.NewApp()
+	imageHandler := &localimg.Handler{ResolveTab: appSvc.ResolveTabPath}
 	broadcaster := newHub()
 	appSvc.InitHeadless(context.Background(), broadcaster.broadcast)
 
@@ -97,10 +98,21 @@ func serve(addr, dist, home string, fresh bool) error {
 	mux.Handle("/", http.FileServer(http.FS(static)))
 
 	// Sandboxed preview images — same handler as the desktop app.
-	mux.Handle("/ximg/", &localimg.Handler{ResolveTab: appSvc.ResolveTabPath})
+	// Host-pinned (DNS-rebinding defense, same as /api/): GET-safe — no
+	// Content-Type rule, browsers send no Origin on plain GET/img loads.
+	pinned := func(next http.HandlerFunc) http.HandlerFunc {
+		return func(w http.ResponseWriter, r *http.Request) {
+			if r.Host != addr {
+				http.Error(w, "unknown host", http.StatusForbidden)
+				return
+			}
+			next(w, r)
+		}
+	}
+	mux.Handle("/ximg/", pinned(imageHandler.ServeHTTP))
 
 	// Events over SSE.
-	mux.HandleFunc("/api/events", broadcaster.sse)
+	mux.HandleFunc("/api/events", pinned(broadcaster.sse))
 
 	// Method dispatch: POST /api/<Method> {"args": [...]}.
 	mux.HandleFunc("/api/", func(w http.ResponseWriter, r *http.Request) {
