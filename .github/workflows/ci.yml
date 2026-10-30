@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: Apache-2.0
-# Copyright 2026 Xtracsys
+# Copyright 2026 Xtracsys LLC
 #
 # Build + test on all three desktop platforms. Go tests, frontend unit tests,
 # and the Playwright acceptance suite (against the real Go backend through the
@@ -150,7 +150,7 @@ jobs:
             mkdir -p pkg/usr/share/icons/hicolor/${size}x${size}/apps
             cp build/linux/${size}x${size}.png pkg/usr/share/icons/hicolor/${size}x${size}/apps/xtracsys-editor.png
           done
-          printf 'Package: xtracsys-editor\nVersion: 0.1.2\nSection: editors\nPriority: optional\nArchitecture: amd64\nInstalled-Size: 20000\nMaintainer: Xtracsys <dev@xtracsys.invalid>\nDescription: Local-first text and Markdown editor\n Byte-faithful plain-text and Markdown editing with live preview.\nDepends: libwebkit2gtk-4.1-0, libgtk-3-0\n' > pkg/DEBIAN/control
+          printf 'Package: xtracsys-editor\nVersion: 0.1.2\nSection: editors\nPriority: optional\nArchitecture: amd64\nInstalled-Size: 20000\nMaintainer: Xtracsys LLC <dev@xtracsys.invalid>\nDescription: Local-first text and Markdown editor\n Byte-faithful plain-text and Markdown editing with live preview.\nDepends: libwebkit2gtk-4.1-0, libgtk-3-0\n' > pkg/DEBIAN/control
           printf '[Desktop Entry]\nType=Application\nName=Xtracsys Editor\nExec=xtracsys-editor\nIcon=xtracsys-editor\nCategories=Development;TextEditor;\n' > pkg/usr/share/applications/xtracsys-editor.desktop
           dpkg-deb --build --root-owner-group pkg build/bin/xtracsys-editor_0.1.2_amd64.deb
 

@@ -169,8 +169,8 @@ dependency scans) with all findings and fixes is in
 
 ## License & trademarks
 
-Source code is licensed under the [Apache License 2.0](LICENSE). That license
-covers the *application source*, not your documents. It also does **not**
+Source code is licensed under the [Apache License 2.0](LICENSE), copyright
+Xtracsys LLC. That license covers the *application source*, not your documents. It also does **not**
 grant rights to Xtracsys trademarks or logos — see
 [TRADEMARKS.md](TRADEMARKS.md). Third-party notices:
 [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// Copyright 2026 Xtracsys
+// Copyright 2026 Xtracsys LLC
 
 // Package recovery stores periodic snapshots of unsaved (dirty) buffers so a
 // crash or forced quit never loses user work.

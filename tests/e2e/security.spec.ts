@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// Copyright 2026 Xtracsys
+// Copyright 2026 Xtracsys LLC
 
 // Dynamic security tests: attack the real preview pipeline with XSS payloads
 // and verify nothing executes, navigates, or leaks. The preview sandbox (no

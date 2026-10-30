@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// Copyright 2026 Xtracsys
+// Copyright 2026 Xtracsys LLC
 
 // Small DOM helpers for modals, toasts, and the status bar. No framework;
 // the whole UI is a few hundred lines of typed DOM code on purpose.

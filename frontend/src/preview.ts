@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// Copyright 2026 Xtracsys
+// Copyright 2026 Xtracsys LLC
 
 // The preview pane: a sandboxed iframe whose srcdoc is rebuilt from the
 // sanitized markdown. Scripts cannot run inside the frame (no allow-scripts);

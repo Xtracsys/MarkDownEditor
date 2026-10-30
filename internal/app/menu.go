@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// Copyright 2026 Xtracsys
+// Copyright 2026 Xtracsys LLC
 
 package app
 

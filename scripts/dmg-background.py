@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: Apache-2.0
-# Copyright 2026 Xtracsys
+# Copyright 2026 Xtracsys LLC
 #
 # Renders the drag-to-install background for the macOS DMG (brand tokens from
 # docs/BRAND.md: warm white #F6F5F1, black #080808, rust #B14831).

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// Copyright 2026 Xtracsys
+// Copyright 2026 Xtracsys LLC
 
 // Shared frontend/backend types. These mirror the Go structs in app.go and
 // internal/fileio — keep both sides in sync.

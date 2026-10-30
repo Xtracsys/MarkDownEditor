@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// Copyright 2026 Xtracsys
+// Copyright 2026 Xtracsys LLC
 
 // Captures README screenshots from the running e2e bridge (start it with
 // `go run ./cmd/e2e-serve` first). Not part of the shipped app.

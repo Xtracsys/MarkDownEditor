@@ -1,9 +1,9 @@
 # Trademark Notice
 
 The Apache License 2.0 that covers this repository's source code **does not
-grant any right to use Xtracsys trademarks, trade names, or logos**.
+grant any right to use Xtracsys LLC trademarks, trade names, or logos**.
 
-- “Xtracsys” and the circular X emblem are trademarks of Xtracsys.
+- “Xtracsys” and the circular X emblem are trademarks of Xtracsys LLC.
 - “Xtracsys Editor” is a *working title* for this application, not a finalized
   product name.
 - The logo and icon assets under `design/`, `build/`, and `frontend/public/`

@@ -1,5 +1,5 @@
 ; SPDX-License-Identifier: Apache-2.0
-; Copyright 2026 Xtracsys
+; Copyright 2026 Xtracsys LLC
 ;
 ; Standalone NSIS installer for Xtracsys Editor. Compiled with makensis
 ; directly (brew install nsis / choco install nsis):
@@ -10,7 +10,7 @@
 !ifndef VERSION
   !define VERSION "0.1.6"
 !endif
-!define PUBLISHER "Xtracsys"
+!define PUBLISHER "Xtracsys LLC"
 !define EXENAME "xtracsys-editor.exe"
 
 Name "${APPNAME} ${VERSION}"

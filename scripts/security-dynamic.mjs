@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// Copyright 2026 Xtracsys
+// Copyright 2026 Xtracsys LLC
 
 // Dynamic security tests against the e2e bridge's HTTP surface (the only
 // network listener any build of this app has). Run:

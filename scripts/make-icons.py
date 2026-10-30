@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: Apache-2.0
-# Copyright 2026 Xtracsys
+# Copyright 2026 Xtracsys LLC
 #
 # Generates the application icons from the emblem crops derived from the
 # supplied brand reference sheet (design/brand-reference.png).

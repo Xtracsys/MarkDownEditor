@@ -22,8 +22,9 @@ Concretely, every change that touches loading or saving must keep these true
 
 ## Ground rules
 
-- **License.** Contributions are accepted under the Apache License 2.0 (see
-  LICENSE). Do not submit code you are not licensed to contribute.
+- **License.** Contributions are accepted under the Apache License 2.0
+  (see LICENSE; copyright Xtracsys LLC). Do not submit code you are not
+  licensed to contribute.
 - **No telemetry, no network features.** The editor is local-first and
   offline. Proposals for accounts, cloud sync, analytics, or auto-updating
   remote content are out of scope.

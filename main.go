@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// Copyright 2026 Xtracsys
+// Copyright 2026 Xtracsys LLC
 
 package main
 
@@ -80,7 +80,7 @@ func main() {
 			OnFileOpen: appSvc.QueueExternalOpenOne,
 			About: &mac.AboutInfo{
 				Title:   "Xtracsys Editor",
-				Message: "A local-first text and Markdown editor.\nVersion " + app.AppVersion + "\nCopyright 2026 Xtracsys — Apache License 2.0",
+				Message: "A local-first text and Markdown editor.\nVersion " + app.AppVersion + "\nCopyright 2026 Xtracsys LLC — Apache License 2.0",
 			},
 		},
 	})

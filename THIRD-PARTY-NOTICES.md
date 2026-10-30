@@ -1,6 +1,6 @@
 # Third-Party Notices
 
-Copyright 2026 Xtracsys. Licensed under the Apache License, Version 2.0 — see
+Copyright 2026 Xtracsys LLC. Licensed under the Apache License, Version 2.0 — see
 [LICENSE](LICENSE).
 
 This file lists the third-party software distributed inside Xtracsys Editor

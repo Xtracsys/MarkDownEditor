@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// Copyright 2026 Xtracsys
+// Copyright 2026 Xtracsys LLC
 
 // The application controller: tab lifecycle, save flows, auto-save, preview
 // modes, external-change handling, status bar, and event wiring. All file
@@ -1168,7 +1168,7 @@ export class Application {
     const info = await this.backend.appInfo();
     await showModal({
       title: "Xtracsys Editor",
-      body: `A local-first text and Markdown editor for programming, configuration files, and documentation.\n\nVersion ${info.version} · ${info.platform}/${info.arch}\nCopyright 2026 Xtracsys\nLicensed under the Apache License 2.0.\n\nFiles stay plain, portable, and byte-faithful. Nothing leaves this machine.`,
+      body: `A local-first text and Markdown editor for programming, configuration files, and documentation.\n\nVersion ${info.version} · ${info.platform}/${info.arch}\nCopyright 2026 Xtracsys LLC\nLicensed under the Apache License 2.0.\n\nFiles stay plain, portable, and byte-faithful. Nothing leaves this machine.`,
       buttons: [{ label: "Close", value: "ok", primary: true }],
     });
   }

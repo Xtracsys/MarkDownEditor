@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// Copyright 2026 Xtracsys
+// Copyright 2026 Xtracsys LLC
 
 import { describe, expect, it } from "vitest";
 import { EditorState, Transaction, type TransactionSpec } from "@codemirror/state";

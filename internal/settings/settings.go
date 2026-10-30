@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// Copyright 2026 Xtracsys
+// Copyright 2026 Xtracsys LLC
 
 // Package settings persists user preferences in the operating system's
 // application-data location. Nothing is ever written next to documents.

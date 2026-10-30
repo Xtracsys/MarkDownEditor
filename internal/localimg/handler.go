@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// Copyright 2026 Xtracsys
+// Copyright 2026 Xtracsys LLC
 
 // Package localimg serves images to the Markdown preview from the open
 // document's directory tree — and only from there. It is the preview's only

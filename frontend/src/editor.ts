@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// Copyright 2026 Xtracsys
+// Copyright 2026 Xtracsys LLC
 
 // CodeMirror wiring: per-tab EditorState, language detection, brand themes,
 // find/replace, indentation, word wrap. The editor owns no file logic.

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// Copyright 2026 Xtracsys
+// Copyright 2026 Xtracsys LLC
 
 // Package app hosts the editor application service: the tab registry,
 // dialogs, events, and every file operation the UI can request. It is bound

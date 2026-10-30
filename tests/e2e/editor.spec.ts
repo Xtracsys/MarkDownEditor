@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// Copyright 2026 Xtracsys
+// Copyright 2026 Xtracsys LLC
 
 // End-to-end acceptance tests. They drive the real editor UI (the same
 // frontend bundle the desktop app embeds) against the real Go backend through
