@@ -78,7 +78,7 @@ ARTICLES = [
     dict(
         slug="e2e-serve",
         title="cmd/e2e-serve — the loopback test bridge",
-        category="core", path="cmd/e2e-serve/main.go", lines=401, lang="Go", status="TEST",
+        category="core", path="cmd/e2e-serve/main.go", lines=413, lang="Go", status="TEST",
         pkg="main", tested_by="guard-tests", related=["security-model", "e2e-editor"],
         lead=[
             "A test harness, never shipped: it serves the built frontend and exposes the real App methods over JSON on loopback, so Playwright drives the actual editor UI against the actual Go backend headlessly. It also implements the pull-based event bridge (SSE) and the test hooks (_EmitMenuAction, _SetSession) that let E2E tests simulate native flows.",

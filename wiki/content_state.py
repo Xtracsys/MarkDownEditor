@@ -43,7 +43,7 @@ ARTICLES = [
     dict(
         slug="session-go",
         title="internal/session/session.go — session + recent files",
-        category="core", path="internal/session/session.go", lines=128, lang="Go", status="CORE",
+        category="core", path="internal/session/session.go", lines=139, lang="Go", status="CORE",
         pkg="session", tested_by="session-tests", related=["app-go", "app-menu"],
         lead=[
             "Paths only — never document content (unsaved work belongs to recovery). One session.json (0600, atomic) holds Recent (deduplicated, capped at 10, most-recent-first) and LastSession (open named documents at quit). LoadLastSession drops paths that no longer exist so a deleted file never errors at launch; LoadRecent keeps everything for menu gray-out but re-caps against tampered files.",

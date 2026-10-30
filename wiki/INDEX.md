@@ -1,6 +1,6 @@
 # Xtracsys Editor — Code Wiki — Wiki Index
 
-> Generated 2026-10-29 19:18 UTC · 42 articles · data: `wiki_data.json`
+> Generated 2026-10-30 19:30 UTC · 42 articles · data: `wiki_data.json`
 
 
 ## How to edit this wiki
@@ -42,7 +42,7 @@
 | 01 | main.go | `main.go` | 109 | CORE |
 | 02 | app.go | `internal/app/app.go` | 837 | CORE |
 | 03 | menu.go | `internal/app/menu.go` | 108 | CORE |
-| 04 | main.go | `cmd/e2e-serve/main.go` | 401 | TEST |
+| 04 | main.go | `cmd/e2e-serve/main.go` | 413 | TEST |
 | 05 | eol.go | `internal/fileio/eol.go` | 178 | CORE |
 | 06 | encoding.go | `internal/fileio/encoding.go` | 141 | CORE |
 | 07 | load.go | `internal/fileio/load.go` | 296 | CORE |
@@ -51,7 +51,7 @@
 | 10 | fuzz_test.go | `internal/fileio/fuzz_test.go` | 120 | TEST |
 | 11 | settings.go | `internal/settings/settings.go` | 144 | CORE |
 | 12 | recovery.go | `internal/recovery/recovery.go` | 182 | CORE |
-| 13 | session.go | `internal/session/session.go` | 128 | CORE |
+| 13 | session.go | `internal/session/session.go` | 139 | CORE |
 | 14 | handler.go | `internal/localimg/handler.go` | 114 | CORE |
 
 ### Tests

@@ -40,6 +40,7 @@ ARTICLES = [
                 "0.1.3 — icon fix (iconfile.icns name mismatch) + three-audit bug hunt (packaging, frontend QA, regression review).",
                 "0.1.4 — stale-artifact pipeline fix: build stamp verification after the installed app was found running old code; iCloud detritus countermeasures.",
                 "0.1.5 — dynamic security testing (fuzzers, XSS battery, HTTP attack suite) + the approved roadmap features: session restore (with setting), Open Recent, convert commands, outline, image paste, reveal, print.",
+                "0.1.6 — round-5/6 fix-verification: the host-pinning wiring caught unwired and fixed with live route tests; the Restore-session settings row (a silent str.replace no-op had faked it); Settings modal inert trap; session-store atomicity; a committed test binary removed. The wiki you are reading is part of the release.",
             ]),
         ],
         key_items=[
