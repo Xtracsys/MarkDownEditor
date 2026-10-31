@@ -31,6 +31,12 @@ type Settings struct {
 	// RestoreSession reopens the last session's documents on launch. The
 	// session store holds paths only and lives in this app-data folder.
 	RestoreSession bool `json:"restoreSession"`
+	// CrashRecoveryEnabled controls whether unsaved buffers are periodically
+	// copied to the app-data recovery folder. OFF by default: snapshots are
+	// plaintext copies of document content at rest, and a privacy-first
+	// editor does not create them unless the user asks. Turning it off
+	// erases any snapshots already stored.
+	CrashRecoveryEnabled bool `json:"crashRecoveryEnabled"`
 	// BlockRemoteResources stops the Markdown preview from loading anything
 	// over the network (images, fonts, styles). The editor is local-first;
 	// this is on by default and the only privacy switch of its kind.
@@ -50,6 +56,7 @@ func Defaults() Settings {
 		HighlightActiveLine:  true,
 		EditorFontSize:       0,
 		RestoreSession:       true,
+		CrashRecoveryEnabled: false,
 		BlockRemoteResources: true,
 	}
 }

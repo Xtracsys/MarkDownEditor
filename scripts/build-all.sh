@@ -15,7 +15,7 @@
 # Usage: scripts/build-all.sh [version]
 set -euo pipefail
 
-VERSION="${1:-0.1.6}"
+VERSION="${1:-0.1.7}"
 STAMP="$(date -u +%Y%m%d%H%M%S)"
 REPO="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$REPO"

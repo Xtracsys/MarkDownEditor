@@ -1087,6 +1087,7 @@ export class Application {
   // or explicit discard. After a crash, the next start offers recovery.
 
   private scheduleSnapshot() {
+    if (!this.settings.crashRecoveryEnabled) return; // opt-in feature
     window.clearTimeout(this.snapshotTimer);
     this.snapshotTimer = window.setTimeout(() => void this.snapshotDirty(), 4000);
   }
@@ -1105,6 +1106,15 @@ export class Application {
   }
 
   private async offerRecovery() {
+    // Recovery is opt-in: when off, any stale snapshots are erased rather
+    // than offered, and the offer never appears.
+    if (!this.settings.crashRecoveryEnabled) {
+      try {
+        const stale = await this.backend.listRecovery();
+        if (stale && stale.length) await this.backend.discardRecovery(stale.map((e) => e.id));
+      } catch { /* best effort */ }
+      return;
+    }
     let entries: import("./ipc").RecoveryEntry[] = [];
     try {
       entries = await this.backend.listRecovery();
@@ -1382,6 +1392,7 @@ export function shortcutText(): string {
 function defaultSettings(): AppSettings {
   return {
     restoreSession: true,
+    crashRecoveryEnabled: false,
     theme: "system",
     autoSaveEnabled: false,
     autoSaveDelayMs: 2000,

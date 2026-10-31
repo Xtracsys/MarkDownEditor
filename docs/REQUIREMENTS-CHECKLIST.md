@@ -77,11 +77,13 @@ and how it is verified. Verification codes: **[T]** automated test,
   skips untitled; Save As is explicit)
 - When disabled, no writes until explicit save — **[E2E]** “unsaved edits
   never touch the file”
-- Crash recovery: dirty buffers snapshot to app-data only (0600, atomic),
-  disclosed in Settings/README, restored as unsaved tabs after a crash —
-  **[T]** internal/recovery suite; **[E2E]** “crash recovery restores unsaved
-  work after an abrupt restart” (real reload-as-crash, recover, and
-  snapshot-consumption checks)
+- Crash recovery: **opt-in setting, off by default** (snapshots are
+  plaintext document content at rest — a privacy-first editor does not
+  create them unasked). Dirty buffers snapshot to app-data only (0600,
+  atomic), disclosed in Settings/README, restored as unsaved tabs after a
+  crash; disabling the setting erases stored snapshots, and startup erases
+  leftovers from older builds — **[T]** internal/recovery + app gating
+  tests; **[E2E]** off-by-default gate + opt-in restore flow
 - Save failures shown clearly; never reported as success — **[D]** SaveResponse
   always carries the failure; **[E2E]** external-change decision flow
 

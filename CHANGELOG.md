@@ -3,6 +3,20 @@
 All notable changes to Xtracsys Editor. Versions follow semver; the format
 follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Changed
+- **Crash recovery is now opt-in and off by default.** Snapshots are
+  plaintext copies of unsaved document content; a privacy-first editor
+  does not put that on disk unasked. Enabling it in Settings starts
+  snapshotting; disabling it erases stored snapshots immediately, and
+  startup erases leftovers from older builds. The recovery offer only
+  appears while the setting is on.
+
+### Fixed
+- Normalize's dialog text corrected (a missing final newline is preserved,
+  not "added").
+
 ## [0.1.6] — 2026-10-30
 
 ### Fixed

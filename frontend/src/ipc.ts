@@ -52,6 +52,7 @@ export interface WatchEvent {
 
 export interface AppSettings {
   restoreSession: boolean;
+  crashRecoveryEnabled: boolean;
   theme: string; // system | light | dark
   autoSaveEnabled: boolean;
   autoSaveDelayMs: number;

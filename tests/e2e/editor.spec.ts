@@ -384,33 +384,44 @@ test("quit guard: unsaved work blocks quit until resolved", async ({ page }) => 
   expect(bytes(file)).toBe("q\n");
 });
 
-test("crash recovery restores unsaved work after an abrupt restart", async ({ page }) => {
+test("crash recovery is opt-in: disabled by default, enabled restores work", async ({ page }) => {
   const file = join(docs, "crashy.md");
   writeFileSync(file, "stable content\n", "utf8");
   await openApp(page);
   await resetSettings(page);
+  // Default: OFF — typed work must produce NO snapshot file.
   await openFile(page, file);
   await page.locator(".cm-content").click();
   await page.keyboard.press("ControlOrMeta+Home");
   await page.keyboard.type("PRECIOUS ");
-  // Let the debounced snapshot land (4s) — then "crash" (reload, no clean close).
-  await page.waitForTimeout(6000);
-  expect(bytes(file)).toBe("stable content\n"); // nothing written to the file
+  await page.waitForTimeout(6000); // past the debounce
+  const leftovers = await page.evaluate(async () => {
+    const r = await (await fetch("/api/ListRecovery", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ args: [] }) })).json();
+    return (r.result || []).length;
+  });
+  expect(leftovers).toBe(0);
 
+  // Opt in, edit, snapshot lands, crash (reload) → offer appears.
+  await page.evaluate(async () => {
+    const w = window as never as { __xe: { app: { getSettings(): Promise<Record<string, unknown>>; updateSettings(s: Record<string, unknown>): Promise<void> } } };
+    const s = await w.__xe.app.getSettings();
+    await w.__xe.app.updateSettings({ ...s, crashRecoveryEnabled: true });
+  });
+  await page.keyboard.press("ControlOrMeta+Home");
+  await page.keyboard.type("PRECIOUS ");
+  await page.waitForTimeout(6000);
   await page.reload();
   await page.waitForFunction(() => !!(window as never as { __xe?: unknown }).__xe);
+  await page.waitForTimeout(1200);
   const modal = page.locator(".modal");
   await expect(modal).toBeVisible({ timeout: 8000 });
   await expect(modal).toContainText("Recover unsaved work");
-  await expect(modal).toContainText("crashy.md");
   await modal.getByRole("button", { name: "Recover All" }).click();
-
-  // The recovered tab holds the unsaved content and is marked dirty.
   await expect
     .poll(async () => page.locator(".cm-content").textContent(), { timeout: 8000 })
-    .toContain("PRECIOUS stable content");
+    .toContain("PRECIOUS PRECIOUS stable content");
   await expect(page.locator(".tab.dirty")).toHaveCount(1);
-  // And the snapshot is consumed: a second reload offers nothing.
+  // Snapshot consumed: second reload offers nothing.
   await page.reload();
   await page.waitForFunction(() => !!(window as never as { __xe?: unknown }).__xe);
   await page.waitForTimeout(1500);

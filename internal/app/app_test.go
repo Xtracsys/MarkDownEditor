@@ -5,6 +5,7 @@ package app
 
 import (
 	"encoding/json"
+	"github.com/xtracsys/xtracsys-editor/internal/recovery"
 	"os"
 	"path/filepath"
 	"strings"
@@ -122,7 +123,55 @@ func TestListRecoveryMarshalsEmptyNotNUll(t *testing.T) {
 	}
 }
 
-// NewTab's Warnings must marshal as [] too.
+// Crash recovery is opt-in: SnapshotTab must write nothing when disabled,
+// and InitHeadless must erase stale snapshots at boot.
+func TestSnapshotTabGatedBySetting(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("HOME", dir)
+	t.Setenv("APPDATA", filepath.Join(dir, "AppData"))
+	t.Setenv("XDG_CONFIG_HOME", filepath.Join(dir, ".config"))
+
+	a := NewApp()
+	var mu sync.Mutex
+	events := &[]event{}
+	a.InitHeadless(t.Context(), func(name string, data interface{}) {
+		mu.Lock()
+		*events = append(*events, event{name: name, data: data})
+		mu.Unlock()
+	})
+	// InitHeadless loaded settings with recovery OFF (default) and cleared
+	// stale snapshots. Seed one manually to prove the gate, not just absence.
+	if a.recov == nil {
+		t.Fatal("recovery store should exist")
+	}
+	if err := a.recov.Save(recovery.Entry{ID: "stale", Content: "old"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := a.SnapshotTab("t1", "/tmp/x.md", "secret draft", []string{"\n"}, "utf8"); err != nil {
+		t.Fatal(err)
+	}
+	entries, _ := a.recov.List()
+	if len(entries) != 1 || entries[0].ID != "stale" {
+		t.Fatalf("disabled SnapshotTab must write nothing: %+v", entries)
+	}
+}
+
+func TestStartupErasesSnapshotsWhenDisabled(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("HOME", dir)
+	t.Setenv("APPDATA", filepath.Join(dir, "AppData"))
+	t.Setenv("XDG_CONFIG_HOME", filepath.Join(dir, ".config"))
+
+	// A previous session left snapshots behind.
+	st, _ := recovery.New(filepath.Join(dir, "Library/Application Support/xtracsys-editor"))
+	_ = st.Save(recovery.Entry{ID: "leftover", Content: "old draft"})
+	a := NewApp()
+	a.InitHeadless(t.Context(), func(string, interface{}) {})
+	entries, _ := a.recov.List()
+	if len(entries) != 0 {
+		t.Fatalf("startup with recovery disabled must erase snapshots: %+v", entries)
+	}
+}
 func TestNewTabWarningsNotNull(t *testing.T) {
 	a, _ := headlessApp(t)
 	data, err := json.Marshal(a.NewTab())

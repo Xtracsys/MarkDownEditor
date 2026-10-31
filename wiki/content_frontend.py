@@ -156,7 +156,7 @@ ARTICLES = [
     dict(
         slug="fe-settingsui",
         title="frontend/src/settingsui.ts — the settings modal",
-        category="frontend", path="frontend/src/settingsui.ts", lines=263, lang="TypeScript",
+        category="frontend", path="frontend/src/settingsui.ts", lines=268, lang="TypeScript",
         status="CORE", pkg="frontend", related=["settings-go"],
         lead=[
             "Hand-built settings modal returning the edited settings on Save (the caller persists). Rows: theme, auto-save (with its off-by-default disclosure), restore-session, auto-save delay, word wrap, indent size, Tab-as-spaces, line numbers, active-line highlight, font size, block-remote-resources, and the crash-recovery disclosure row (Always on). Every input is clamped; the modal is compact enough to avoid scrolling and participates in the topmost-only keyboard rule.",

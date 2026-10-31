@@ -140,6 +140,9 @@ func (a *App) InitHeadless(ctx context.Context, sink func(name string, data inte
 	if dir, err := settings.Dir(); err == nil {
 		a.recov, _ = recovery.New(dir)
 		a.sess, _ = session.New(dir)
+		if !a.settings.CrashRecoveryEnabled {
+			_ = a.recov.ClearAll() // recovery off: erase stale snapshots
+		}
 	}
 	a.watcher = fileio.NewWatcher(func(ev fileio.WatchEvent) {
 		a.emitEvent(EventWatch, ev)
@@ -642,12 +645,16 @@ func (a *App) MarkExternalReady() []string {
 // OS app-data folder. Originals are never touched; restoring produces a
 // normal dirty tab the user saves deliberately.
 func (a *App) SnapshotTab(tabId, path, content string, eols []string, encoding string) error {
+	a.mu.Lock()
+	enabled := a.settings.CrashRecoveryEnabled
+	_, exists := a.tabs[tabId]
+	a.mu.Unlock()
+	if !enabled {
+		return nil // crash recovery is off: never write document content
+	}
 	if a.recov == nil {
 		return nil // recovery unavailable; editing still works
 	}
-	a.mu.Lock()
-	_, exists := a.tabs[tabId]
-	a.mu.Unlock()
 	if !exists {
 		return nil // tab closed while a debounced snapshot was in flight
 	}

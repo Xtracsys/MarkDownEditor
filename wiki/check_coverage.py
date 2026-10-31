@@ -8,10 +8,10 @@ REPO = os.path.dirname(os.path.abspath(__file__)) + "/.."
 COVER = {
     "project-overview": ["README.md"],
     "release-history": ["WIKI.md"],
-    "security-model": ["docs/SECURITY-AUDIT.md", "SECURITY.md"],
+    "security-model": ["docs/SECURITY-AUDIT.md", "SECURITY.md", "docs/RELEASE-NOTES-"],
     "architecture": ["docs/ARCHITECTURE.md"],
     "requirements-checklist": ["docs/REQUIREMENTS-CHECKLIST.md"],
-    "platform-status": ["docs/PLATFORM-STATUS.md"],
+    "platform-status": ["docs/PLATFORM-STATUS.md", "docs/PUBLISHING.md", "docs/RELEASE-NOTES-"],
     "brand": ["docs/BRAND.md", "design/"],
     "main-go": ["main.go"],
     "app-go": ["internal/app/app.go"],

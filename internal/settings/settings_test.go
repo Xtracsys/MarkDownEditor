@@ -33,6 +33,9 @@ func TestFreshInstallAutoSaveDisabled(t *testing.T) {
 	if s.BlockRemoteResources != true {
 		t.Error("remote resource blocking must be on by default")
 	}
+	if s.CrashRecoveryEnabled {
+		t.Error("crash recovery must be OFF by default: snapshots are plaintext document content at rest")
+	}
 	if s.Theme != "system" {
 		t.Errorf("default theme = %q, want system", s.Theme)
 	}

@@ -98,15 +98,9 @@ export async function openSettingsModal(current: AppSettings): Promise<AppSettin
       current.blockRemoteResources, (v) => (draft.blockRemoteResources = v)),
   });
 
-  // Disclosed, always-on crash recovery (informational row).
-  const recovInfo = document.createElement("div");
-  recovInfo.style.cssText = "color: var(--text-faint); font-size: 11px; max-width: 260px; text-align: right;";
-  recovInfo.textContent = "Always on";
   rows.push({
-    key: "recovery",
-    label: "Crash recovery",
-    sub: "Unsaved changes are periodically copied to this app's private data folder and offered for recovery after a crash. They never touch your files or your project folders.",
-    control: recovInfo,
+    ...toggle("Crash recovery", "Off by default. When on, unsaved changes are periodically copied to this app's private data folder and offered for recovery after a crash. Snapshots are plaintext copies — enable only if you accept that. They never touch your files or project folders, and turning it off erases stored snapshots.",
+      current.crashRecoveryEnabled, (v) => (draft.crashRecoveryEnabled = v)),
   });
 
   // Build DOM.

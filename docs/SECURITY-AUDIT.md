@@ -202,6 +202,16 @@ the app background inert while a dialog is open, and Normalize no-ops
 cleanly on single-line files. WriteImageFile's O_EXCL rewrite and the
 session store hardening verified correct. Scanners re-run: 0 findings.
 
+## Follow-up: crash recovery made opt-in
+
+The original crash-recovery design copied unsaved buffers to app-data
+unconditionally (0600, disclosed) — defensible but still plaintext
+document content at rest that the user never chose to persist. On review
+the feature is now **opt-in, off by default**: enabling starts
+snapshotting; disabling erases stored snapshots immediately and startup
+erases leftovers from older builds. The gate is enforced on both sides
+(frontend scheduler + Go SnapshotTab) and covered by tests.
+
 ## Residual risks (stated plainly)
 
 1. The check→rename race narrowed to one read (F4) cannot be fully closed

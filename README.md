@@ -88,14 +88,17 @@ documents, and never files that changed on disk (no silent overwrites). Your
 choice persists across launches. When off, editing never writes to the
 original file until you explicitly save.
 
-## Crash recovery
+## Crash recovery (opt-in, off by default)
 
-Unsaved changes are periodically snapshotted to the app's private data
-folder (never next to your documents, never inside them). If the editor
-crashes or is force-quit, the next start offers to restore them as unsaved
-tabs — **nothing is written to your files until you save**. Snapshots are
-private (0600), cleared on save/close/discard, and disclosed in Settings.
-This feature is always on; there is no crash-recovery data anywhere else.
+Snapshots of unsaved changes are plaintext copies of document content —
+and a privacy-first editor does not put document content on disk unless
+you ask. So crash recovery is a **setting, off by default**: enable it in
+Settings and unsaved changes are periodically copied to the app's private
+data folder (never next to your documents, never inside them). If the
+editor crashes or is force-quit, the next start offers to restore them as
+unsaved tabs — **nothing is written to your files until you save**.
+Snapshots are private (0600), cleared on save/close/discard, and turning
+the setting off erases any stored snapshots immediately.
 
 ## Settings & state
 

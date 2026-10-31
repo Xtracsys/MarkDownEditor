@@ -8,7 +8,7 @@
 
 !define APPNAME "Xtracsys Editor"
 !ifndef VERSION
-  !define VERSION "0.1.6"
+  !define VERSION "0.1.7"
 !endif
 !define PUBLISHER "Xtracsys LLC"
 !define EXENAME "xtracsys-editor.exe"
