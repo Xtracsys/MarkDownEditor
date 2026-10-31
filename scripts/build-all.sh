@@ -98,6 +98,9 @@ echo "==> compiling NSIS installer"
 makensis -V2 -DVERSION="$VERSION" build/windows/installer/xtracsys-editor.nsi >/dev/null
 echo "    installer written"
 
+# Restore the committed default stamp so the dev tree stays clean.
+git checkout -- internal/app/buildstamp_gen.go 2>/dev/null || true
+
 ( cd dist && shasum -a 256 "xtracsys-editor-$VERSION"-*.dmg "xtracsys-editor-$VERSION"-*.zip "xtracsys-editor-$VERSION"-*.exe > SHA256SUMS.txt )
 echo "==> artifacts:"
 ls -la dist/
