@@ -7,7 +7,7 @@ import json, subprocess, sys, os
 REPO = os.path.dirname(os.path.abspath(__file__)) + "/.."
 COVER = {
     "project-overview": ["README.md"],
-    "release-history": ["WIKI.md"],
+    "release-history": ["WIKI.md", "CHANGELOG.md"],
     "security-model": ["docs/SECURITY-AUDIT.md", "SECURITY.md", "docs/RELEASE-NOTES-"],
     "architecture": ["docs/ARCHITECTURE.md"],
     "requirements-checklist": ["docs/REQUIREMENTS-CHECKLIST.md"],
