@@ -16,17 +16,18 @@ checklist — follow it in order. Estimated time: 15 minutes.
 - [x] Scanners clean: govulncheck 0, npm audit 0 (production), secrets sweep
       0 true positives, no large stray binaries in git.
 
-## 1. Pre-flight (do these the day of the upload)
+## 1. Pre-flight (done 2026-10-31)
+
+The repository now lives at `~/Projects/MarkDownEditor` (internal disk,
+NOT iCloud-synced). The previous iCloud-synced Desktop location corrupted
+build outputs repeatedly — see WIKI.md §7. Do not move it back.
 
 ```sh
-cd /Users/admin/Desktop/ZcodeProjects/MarkDownEditor
+cd ~/Projects/MarkDownEditor
 
-# 1. Recommended: move the repo out of the iCloud-synced Desktop first.
-#    The file provider has repeatedly corrupted build outputs and renamed
-#    files in this location.
-mkdir -p ~/Projects && mv ~/Desktop/ZcodeProjects/MarkDownEditor ~/Projects/
-
-# 2. Final test pass from the new location (paths in test config are relative).
+# Final test pass:
+go test ./... && (cd frontend && npm ci && npm test && npm run build)
+npx playwright test
 go test ./... && (cd frontend && npm ci && npm test && npm run build)
 npx playwright test
 
