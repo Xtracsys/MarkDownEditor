@@ -195,3 +195,6 @@ build/               platform packaging assets & icons
 docs/                architecture, brand, platform status, requirements
 tests/e2e            Playwright acceptance suite
 ```
+
+Questions about MarkDownEditor, security reports, or anything else about the
+project: **opensource@xtracsys.com**.
