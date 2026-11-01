@@ -1,6 +1,6 @@
 # Xtracsys Editor — Code Wiki — Wiki Index
 
-> Generated 2026-11-01 03:24 UTC · 42 articles · data: `wiki_data.json`
+> Generated 2026-11-01 05:53 UTC · 43 articles · data: `wiki_data.json`
 
 
 ## How to edit this wiki
@@ -75,3 +75,4 @@
 | 03 | ci.yml | `.github/workflows/ci.yml` | 187 | META |
 | 04 | wails.json | `wails.json` | 247 | META |
 | 05 | .gitignore | `.gitignore` | 26 | META |
+| 06 | RELEASE-READINESS-REPORT.md | `docs/RELEASE-READINESS-REPORT.md` | — | META |
