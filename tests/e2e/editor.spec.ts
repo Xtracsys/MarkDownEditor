@@ -80,6 +80,26 @@ async function resetSettings(page: Page) {
 
 const bytes = (p: string) => readFileSync(p).toString("latin1");
 
+/** Save + race against a stalled drive (ExFAT writes can hang); the file
+ * poll after this is the honest verdict either way. */
+async function saveActiveRaced(page: Page, timeout = 20000): Promise<void> {
+  await page.evaluate((t) =>
+    Promise.race([
+      (window as never as { __xe: { app: { saveActive(): Promise<boolean> } } }).__xe.app.saveActive(),
+      new Promise((r) => setTimeout(() => r("stalled"), t)),
+    ]), timeout);
+}
+
+
+/** Poll until the file on disk matches, instead of a fixed sleep (ExFAT +
+ * loaded CI can exceed any fixed wait). */
+async function waitForBytes(file: string, expected: string, timeout = 8000) {
+  await expect
+    .poll(() => bytes(file), { timeout, intervals: [100, 250, 500] })
+    .toBe(expected);
+}
+
+
 // --------------------------------------------------------------------
 
 test("fresh installation has auto-save disabled", async ({ page }) => {
@@ -148,12 +168,9 @@ test("byte fidelity: CRLF, BOM-less UTF-8, no final newline preserved through re
   await page.locator(".cm-content").click();
   await page.keyboard.press("ControlOrMeta+End");
   await page.keyboard.type(" three");
-  await page.evaluate(() =>
-    (window as never as { __xe: { app: { saveActive(): Promise<boolean> } } }).__xe.app.saveActive(),
-  );
-  await page.waitForTimeout(400);
+  await saveActiveRaced(page);
   // CRLF preserved, still no final newline, nothing appended or re-encoded.
-  expect(bytes(file)).toBe("one\r\ntwo three");
+  await waitForBytes(file, "one\r\ntwo three");
 });
 
 test("mixed line endings survive an open/edit/save cycle untouched", async ({ page }) => {
@@ -166,11 +183,8 @@ test("mixed line endings survive an open/edit/save cycle untouched", async ({ pa
   await page.keyboard.press("ControlOrMeta+Home");
   await page.keyboard.press("End");
   await page.keyboard.type("A"); // edit line 1 in place
-  await page.evaluate(() =>
-    (window as never as { __xe: { app: { saveActive(): Promise<boolean> } } }).__xe.app.saveActive(),
-  );
-  await page.waitForTimeout(400);
-  expect(bytes(file)).toBe("aA\r\nb\nc\rd");
+  await saveActiveRaced(page);
+  await waitForBytes(file, "aA\r\nb\nc\rd");
   void before;
 });
 
@@ -239,6 +253,7 @@ test("local image resolves relative to the document and loads", async ({ page })
 });
 
 test("dotfiles, extensionless, and unknown extensions open and save", async ({ page }) => {
+  test.setTimeout(90000); // ExFAT writes can stall; polling handles the rest
   await openApp(page);
   await resetSettings(page);
 
@@ -256,11 +271,8 @@ test("dotfiles, extensionless, and unknown extensions open and save", async ({ p
     await page.keyboard.press("ControlOrMeta+Home");
     await page.keyboard.press("End");
     await page.keyboard.type(" EDIT");
-    await page.evaluate(() =>
-      void (window as never as { __xe: { app: { saveActive(): Promise<boolean> } } }).__xe.app.saveActive(),
-    );
-    await page.waitForTimeout(300);
-    expect(bytes(file)).toBe(after);
+    await saveActiveRaced(page);
+    await waitForBytes(file, after);
     // Close the tab to keep a clean slate for the next case.
     await page.evaluate(() =>
       (window as never as { __xe: { app: { closeActiveTab(): Promise<void> } } }).__xe.app.closeActiveTab(),
@@ -308,9 +320,7 @@ test("external changes are detected and never silently overwritten", async ({ pa
   await page.locator(".cm-content").click();
   await page.keyboard.press("ControlOrMeta+Home");
   await page.keyboard.type("mine ");
-  await page.evaluate(() =>
-    void (window as never as { __xe: { app: { saveActive(): Promise<boolean> } } }).__xe.app.saveActive(),
-  );
+  await saveActiveRaced(page);
   const decision = page.locator(".modal");
   await expect(decision).toContainText("changed on disk");
   await decision.getByRole("button", { name: "Overwrite" }).click();
@@ -336,8 +346,7 @@ test("closing a dirty tab warns and offers save/discard/cancel", async ({ page }
   await expect(dialog).toContainText("Unsaved changes");
   await dialog.getByRole("button", { name: "Save" }).click();
   await expect(dialog).toBeHidden();
-  await page.waitForTimeout(300);
-  expect(bytes(file)).toBe("typed body\n");
+  await waitForBytes(file, "typed body\n");
 });
 
 test("no network requests leave the app during normal editing", async ({ page }) => {
@@ -564,13 +573,10 @@ test("normalize line endings converts mixed endings to the predominant style on 
   await expect(dialog).toContainText("Normalize");
   await dialog.getByRole("button", { name: "Normalize" }).click();
   await expect(page.locator("#status-eol")).toHaveText("CRLF");
-  await page.evaluate(() =>
-    void (window as never as { __xe: { app: { saveActive(): Promise<boolean> } } }).__xe.app.saveActive(),
-  );
-  await page.waitForTimeout(400);
+  await saveActiveRaced(page);
   // Normalization rewrites existing line breaks only — the missing final
   // newline is faithfully preserved.
-  expect(bytes(file)).toBe("a\r\nb\r\nc");
+  await waitForBytes(file, "a\r\nb\r\nc");
 });
 
 test("convert to UTF-8 re-encodes the file on save", async ({ page }) => {
@@ -591,11 +597,8 @@ test("convert to UTF-8 re-encodes the file on save", async ({ page }) => {
   await expect(dialog).toContainText("Convert to UTF-8");
   await dialog.getByRole("button", { name: "Convert" }).click();
   await expect(page.locator("#status-encoding")).toContainText("UTF-8");
-  await page.evaluate(() =>
-    void (window as never as { __xe: { app: { saveActive(): Promise<boolean> } } }).__xe.app.saveActive(),
-  );
-  await page.waitForTimeout(400);
-  expect(bytes(file)).toBe(content);
+  await saveActiveRaced(page);
+  await waitForBytes(file, content);
 });
 
 test("outline panel lists headings and jumps to them", async ({ page }) => {
@@ -614,6 +617,7 @@ test("outline panel lists headings and jumps to them", async ({ page }) => {
 });
 
 test("paste image writes a file next to the document and inserts a reference", async ({ page }) => {
+  test.setTimeout(90000); // ExFAT writes can stall
   const file = join(docs, "paste-target.md");
   writeFileSync(file, "before\n", "utf8");
   await openApp(page);
@@ -635,11 +639,11 @@ test("paste image writes a file next to the document and inserts a reference", a
   const dialog = page.locator(".modal");
   await expect(dialog).toContainText("Save pasted image");
   await dialog.getByRole("button", { name: "Save Image" }).click();
-  await page.waitForTimeout(500);
-  await page.evaluate(() =>
-    void (window as never as { __xe: { app: { saveActive(): Promise<boolean> } } }).__xe.app.saveActive(),
-  );
-  await page.waitForTimeout(400);
+  // The reference is inserted at the cursor — poll the editor for it.
+  await expect
+    .poll(async () => page.locator(".cm-content").textContent(), { timeout: 8000 })
+    .toContain("![pasted-");
+  await saveActiveRaced(page);
   const expected = join(docs, "paste-target.md");
   const content = readFileSync(expected, "utf8");
   expect(content).toContain("![pasted-");

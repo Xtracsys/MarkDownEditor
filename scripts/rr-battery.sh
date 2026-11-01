@@ -40,10 +40,12 @@ LEFT=$(find . -path ./node_modules -prune -o -path ./frontend/node_modules -prun
 if [ "$LEFT" = "0" ]; then res PASS "EXFAT-01" "no AppleDouble junk in tracked tree after sweep"; else res FAIL "EXFAT-01" "$LEFT AppleDouble files remain"; fi
 
 # ---------------- A1: secrets ----------------------------------------------
-if git ls-files | xargs grep -lniE '(api[_-]?key|passw(or)?d[ :=]|BEGIN (RSA|EC|OPENSSH) PRIVATE KEY|ghp_[A-Za-z0-9]{20,}|github_pat_)' 2>/dev/null | grep -v node_modules; then
-  res FAIL "A1-01" "secret-pattern hits in tracked files"
+# The sweep excludes its own pattern list (self-match is not a finding).
+SECRET_HITS="$(git ls-files | grep -v "scripts/rr-battery.sh" | xargs grep -lniE '(api[_-]?key|passw(or)?d[ :=]|BEGIN (RSA|EC|OPENSSH) PRIVATE KEY|ghp_[A-Za-z0-9]{20,}|github_pat_)' 2>/dev/null | grep -v node_modules || true)"
+if [ -n "$SECRET_HITS" ]; then
+  res FAIL "A1-01" "secret-pattern hits: $SECRET_HITS"
 else
-  res PASS "A1-01" "tracked-file secret sweep clean"
+  res PASS "A1-01" "tracked-file secret sweep clean (self excluded)"
 fi
 if git log --all --format="%s %b" | grep -qiE '(password[ :=]|api[_-]key[ :=]|ghp_[A-Za-z0-9]{20,})'; then
   res FAIL "A1-02" "secret-like strings in commit history"

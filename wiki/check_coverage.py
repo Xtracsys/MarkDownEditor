@@ -49,7 +49,7 @@ COVER = {
     "e2e-security": ["tests/e2e/security.spec.ts"],
     "build-pipeline": ["scripts/build-all.sh", "scripts/make-dmg.sh", "scripts/dmg-background.py"],
     "make-icons": ["scripts/make-icons.py", "scripts/capture-screenshots.mjs", "docs/screenshots/"],
-    "security-scripts": ["scripts/security-dynamic.mjs"],
+    "security-scripts": ["scripts/security-dynamic.mjs", "scripts/rr-battery.sh"],
     "ci": [".github/", "playwright.config.ts"],
     "packaging": ["wails.json", "build/darwin/", "build/windows/", "build/linux/",
                   "build/appicon.png", "build/iconfile.png", "go.mod", "go.sum"],

@@ -9,6 +9,8 @@ const here = __dirname;
 
 export default defineConfig({
   testDir: "./tests/e2e",
+  // ExFAT/file-provider AppleDouble companions are not tests.
+  testIgnore: "**/._**",
   timeout: 30000,
   retries: 0,
   workers: 1, // the bridge holds shared per-tab state; serialize tests

@@ -52,7 +52,10 @@ export class Application {
   private view!: EditorView;
   private tabs: Tab[] = [];
   private active: Tab | null = null;
-  private settings!: AppSettings;
+  // Field-initialized so startup-adjacent callers (tests, early events) can
+  // never observe undefined settings; start() overwrites with persisted
+  // values as soon as they arrive.
+  private settings = defaultSettings();
   private preview: PreviewPane;
   private autosaveTimer: number | undefined;
   private snapshotTimer: number | undefined;
@@ -199,9 +202,14 @@ export class Application {
   }
 
   async openPaths(paths: string[], opts: { silentFailures?: boolean } = {}) {
-    if (!paths.length) return;
-    const outcomes = await this.backend.openPaths(paths);
-    await this.openOutcomes(outcomes, paths, opts);
+    try {
+      if (!paths.length) return;
+      const outcomes = await this.backend.openPaths(paths);
+      await this.openOutcomes(outcomes, paths, opts);
+    } catch (e) {
+      console.error("openPaths INTERNAL:", e && (e as Error).stack ? (e as Error).stack : String(e));
+      throw e;
+    }
   }
 
   private async openOutcomes(outcomes: OpenOutcome[], paths?: string[], opts: { silentFailures?: boolean } = {}) {
