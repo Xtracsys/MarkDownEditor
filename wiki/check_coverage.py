@@ -14,7 +14,7 @@ COVER = {
     "platform-status": ["docs/PLATFORM-STATUS.md", "docs/PUBLISHING.md", "docs/RELEASE-NOTES-"],
     "brand": ["docs/BRAND.md", "design/"],
     "main-go": ["main.go"],
-    "app-go": ["internal/app/app.go"],
+    "app-go": ["internal/app/app.go", "internal/app/buildstamp_gen.go"],
     "app-menu": ["internal/app/menu.go"],
     "e2e-serve": ["cmd/e2e-serve/"],
     "fileio-eol": ["internal/fileio/eol.go"],

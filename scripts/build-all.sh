@@ -105,3 +105,5 @@ git checkout -- internal/app/buildstamp_gen.go 2>/dev/null || true
 echo "==> artifacts:"
 ls -la dist/
 echo "==> stamp: $STAMP  (About dialog and Startup diagnostics include version $VERSION)"
+printf "%s\n" "$STAMP" > dist/STAMP.txt
+echo "==> stamp recorded in dist/STAMP.txt"

@@ -95,12 +95,14 @@ async function ximg(path, headers = {}) {
   record("unknown method returns error envelope", !!env.error, JSON.stringify(env).slice(0, 80));
 }
 {
+  // OpenPaths requires absolute paths (CWD-dependent traversal is refused
+  // by design; the desktop app only ever receives absolute paths).
   const r = await api("OpenPaths", [["../../../../etc/passwd"]]);
   const env = await r.json();
   const outcome = env.result?.[0];
   record(
-    "traversal open refused or explained",
-    outcome?.issue != null && ["not-found", "io", "not-regular", "directory"].includes(outcome.issue.reason),
+    "relative traversal refused",
+    outcome?.issue?.reason === "relative-path",
     `status ${r.status} body ${JSON.stringify(env).slice(0, 120)}`,
   );
 }

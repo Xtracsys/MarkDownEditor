@@ -439,10 +439,18 @@ func (a *App) NewTab() *TabInfo {
 func (a *App) OpenPaths(paths []string) []OpenOutcome {
 	a.debugLog("OpenPaths", paths)
 	out := make([]OpenOutcome, 0, len(paths))
-	if out == nil {
-		out = []OpenOutcome{}
-	}
 	for _, p := range paths {
+		// Absolute paths only: argv, Apple Events, and drag-drop all provide
+		// absolute paths. Rejecting relative paths removes CWD-dependent
+		// resolution (a relative traversal could otherwise escape into
+		// system files depending on where the app was launched from).
+		if !filepath.IsAbs(p) {
+			out = append(out, OpenOutcome{Issue: &fileio.Issue{
+				Reason:  "relative-path",
+				Message: "Absolute file paths only: " + p + " resolves against the working directory and is not opened.",
+			}})
+			continue
+		}
 		out = append(out, a.openOne(p, false))
 	}
 	return out
