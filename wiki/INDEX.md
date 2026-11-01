@@ -1,6 +1,6 @@
 # Xtracsys Editor — Code Wiki — Wiki Index
 
-> Generated 2026-11-01 01:53 UTC · 42 articles · data: `wiki_data.json`
+> Generated 2026-11-01 03:24 UTC · 42 articles · data: `wiki_data.json`
 
 
 ## How to edit this wiki

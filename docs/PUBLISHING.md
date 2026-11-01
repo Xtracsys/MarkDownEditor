@@ -16,25 +16,17 @@ checklist — follow it in order. Estimated time: 15 minutes.
 - [x] Scanners clean: govulncheck 0, npm audit 0 (production), secrets sweep
       0 true positives, no large stray binaries in git.
 
-## 1. Pre-flight (done 2026-10-31)
+## 1. Pre-flight (current — 2026-11-01)
 
-The repository now lives at `~/Projects/MarkDownEditor` (internal disk,
-NOT iCloud-synced). The previous iCloud-synced Desktop location corrupted
-build outputs repeatedly — see WIKI.md §7. Do not move it back.
+The canonical repository now lives at:
+**/Volumes/XSdrive/Projects/MarkDownEditor**
 
-```sh
-cd ~/Projects/MarkDownEditor
-
-# Final test pass:
-go test ./... && (cd frontend && npm ci && npm test && npm run build)
-npx playwright test
-go test ./... && (cd frontend && npm ci && npm test && npm run build)
-npx playwright test
-
-# 3. Verify the working tree is clean and the tag exists.
-git status                # should be clean
-git tag                   # should list v0.1.6
-```
+**Interim backup (2026-10-31):** while this volume is the only copy, a full
+git bundle of the repository — history, both tags, working-tree state as of
+HEAD `337af75` — is stored at `~/Backups/xtracsys-editor-2026-10-31.bundle`
+on the internal disk. If anything happens to this volume before the new
+APFS drive arrives: `git clone ~/Backups/xtracsys-editor-2026-10-31.bundle`
+restores everything.
 
 ## 2. Create the repository and push
 

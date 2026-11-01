@@ -26,3 +26,7 @@ Thumbs.db
 
 # stray local build outputs
 e2e-serve
+
+# ExFAT/file-provider junk (external-drive working copies)
+._*
+.DS_Store
