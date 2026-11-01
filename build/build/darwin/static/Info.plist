@@ -1,0 +1,528 @@
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+    <dict>
+        <key>CFBundlePackageType</key>
+        <string>APPL</string>
+        <key>CFBundleName</key>
+        <string>Xtracsys Editor</string>
+        <key>CFBundleExecutable</key>
+        <string>xtracsys-editor</string>
+        <key>CFBundleIdentifier</key>
+        <string>editors.xtracsys.xtracsys-editor</string>
+        <key>CFBundleVersion</key>
+        <string>0.1.2</string>
+        <key>CFBundleGetInfoString</key>
+        <string>A local-first text and Markdown editor</string>
+        <key>CFBundleShortVersionString</key>
+        <string>0.1.2</string>
+        <key>CFBundleIconFile</key>
+        <string>iconfile</string>
+        <key>LSMinimumSystemVersion</key>
+        <string>12.0</string>
+        <key>NSHighResolutionCapable</key>
+        <true/>
+        <key>NSHumanReadableCopyright</key>
+        <string>Copyright 2026 Xtracsys LLC</string>
+        
+        <key>CFBundleDocumentTypes</key>
+        <array>
+          
+          <dict>
+            <key>CFBundleTypeExtensions</key>
+            <array>
+              <string>md</string>
+            </array>
+            <key>CFBundleTypeName</key>
+            <string>Markdown document</string>
+            <key>CFBundleTypeRole</key>
+            <string>Editor</string>
+            <key>CFBundleTypeIconFile</key>
+            <string>iconfile</string>
+          </dict>
+          
+          <dict>
+            <key>CFBundleTypeExtensions</key>
+            <array>
+              <string>markdown</string>
+            </array>
+            <key>CFBundleTypeName</key>
+            <string>Markdown document</string>
+            <key>CFBundleTypeRole</key>
+            <string>Editor</string>
+            <key>CFBundleTypeIconFile</key>
+            <string>iconfile</string>
+          </dict>
+          
+          <dict>
+            <key>CFBundleTypeExtensions</key>
+            <array>
+              <string>mkd</string>
+            </array>
+            <key>CFBundleTypeName</key>
+            <string>Markdown document</string>
+            <key>CFBundleTypeRole</key>
+            <string>Editor</string>
+            <key>CFBundleTypeIconFile</key>
+            <string>iconfile</string>
+          </dict>
+          
+          <dict>
+            <key>CFBundleTypeExtensions</key>
+            <array>
+              <string>txt</string>
+            </array>
+            <key>CFBundleTypeName</key>
+            <string>Text document</string>
+            <key>CFBundleTypeRole</key>
+            <string>Editor</string>
+            <key>CFBundleTypeIconFile</key>
+            <string>iconfile</string>
+          </dict>
+          
+          <dict>
+            <key>CFBundleTypeExtensions</key>
+            <array>
+              <string>text</string>
+            </array>
+            <key>CFBundleTypeName</key>
+            <string>Text document</string>
+            <key>CFBundleTypeRole</key>
+            <string>Editor</string>
+            <key>CFBundleTypeIconFile</key>
+            <string>iconfile</string>
+          </dict>
+          
+          <dict>
+            <key>CFBundleTypeExtensions</key>
+            <array>
+              <string>log</string>
+            </array>
+            <key>CFBundleTypeName</key>
+            <string>Log file</string>
+            <key>CFBundleTypeRole</key>
+            <string>Editor</string>
+            <key>CFBundleTypeIconFile</key>
+            <string>iconfile</string>
+          </dict>
+          
+          <dict>
+            <key>CFBundleTypeExtensions</key>
+            <array>
+              <string>json</string>
+            </array>
+            <key>CFBundleTypeName</key>
+            <string>JSON document</string>
+            <key>CFBundleTypeRole</key>
+            <string>Editor</string>
+            <key>CFBundleTypeIconFile</key>
+            <string>iconfile</string>
+          </dict>
+          
+          <dict>
+            <key>CFBundleTypeExtensions</key>
+            <array>
+              <string>yaml</string>
+            </array>
+            <key>CFBundleTypeName</key>
+            <string>YAML document</string>
+            <key>CFBundleTypeRole</key>
+            <string>Editor</string>
+            <key>CFBundleTypeIconFile</key>
+            <string>iconfile</string>
+          </dict>
+          
+          <dict>
+            <key>CFBundleTypeExtensions</key>
+            <array>
+              <string>yml</string>
+            </array>
+            <key>CFBundleTypeName</key>
+            <string>YAML document</string>
+            <key>CFBundleTypeRole</key>
+            <string>Editor</string>
+            <key>CFBundleTypeIconFile</key>
+            <string>iconfile</string>
+          </dict>
+          
+          <dict>
+            <key>CFBundleTypeExtensions</key>
+            <array>
+              <string>toml</string>
+            </array>
+            <key>CFBundleTypeName</key>
+            <string>TOML document</string>
+            <key>CFBundleTypeRole</key>
+            <string>Editor</string>
+            <key>CFBundleTypeIconFile</key>
+            <string>iconfile</string>
+          </dict>
+          
+          <dict>
+            <key>CFBundleTypeExtensions</key>
+            <array>
+              <string>ini</string>
+            </array>
+            <key>CFBundleTypeName</key>
+            <string>Configuration file</string>
+            <key>CFBundleTypeRole</key>
+            <string>Editor</string>
+            <key>CFBundleTypeIconFile</key>
+            <string>iconfile</string>
+          </dict>
+          
+          <dict>
+            <key>CFBundleTypeExtensions</key>
+            <array>
+              <string>cfg</string>
+            </array>
+            <key>CFBundleTypeName</key>
+            <string>Configuration file</string>
+            <key>CFBundleTypeRole</key>
+            <string>Editor</string>
+            <key>CFBundleTypeIconFile</key>
+            <string>iconfile</string>
+          </dict>
+          
+          <dict>
+            <key>CFBundleTypeExtensions</key>
+            <array>
+              <string>conf</string>
+            </array>
+            <key>CFBundleTypeName</key>
+            <string>Configuration file</string>
+            <key>CFBundleTypeRole</key>
+            <string>Editor</string>
+            <key>CFBundleTypeIconFile</key>
+            <string>iconfile</string>
+          </dict>
+          
+          <dict>
+            <key>CFBundleTypeExtensions</key>
+            <array>
+              <string>csv</string>
+            </array>
+            <key>CFBundleTypeName</key>
+            <string>CSV document</string>
+            <key>CFBundleTypeRole</key>
+            <string>Editor</string>
+            <key>CFBundleTypeIconFile</key>
+            <string>iconfile</string>
+          </dict>
+          
+          <dict>
+            <key>CFBundleTypeExtensions</key>
+            <array>
+              <string>xml</string>
+            </array>
+            <key>CFBundleTypeName</key>
+            <string>XML document</string>
+            <key>CFBundleTypeRole</key>
+            <string>Editor</string>
+            <key>CFBundleTypeIconFile</key>
+            <string>iconfile</string>
+          </dict>
+          
+          <dict>
+            <key>CFBundleTypeExtensions</key>
+            <array>
+              <string>html</string>
+            </array>
+            <key>CFBundleTypeName</key>
+            <string>HTML document</string>
+            <key>CFBundleTypeRole</key>
+            <string>Editor</string>
+            <key>CFBundleTypeIconFile</key>
+            <string>iconfile</string>
+          </dict>
+          
+          <dict>
+            <key>CFBundleTypeExtensions</key>
+            <array>
+              <string>css</string>
+            </array>
+            <key>CFBundleTypeName</key>
+            <string>CSS stylesheet</string>
+            <key>CFBundleTypeRole</key>
+            <string>Editor</string>
+            <key>CFBundleTypeIconFile</key>
+            <string>iconfile</string>
+          </dict>
+          
+          <dict>
+            <key>CFBundleTypeExtensions</key>
+            <array>
+              <string>js</string>
+            </array>
+            <key>CFBundleTypeName</key>
+            <string>JavaScript source</string>
+            <key>CFBundleTypeRole</key>
+            <string>Editor</string>
+            <key>CFBundleTypeIconFile</key>
+            <string>iconfile</string>
+          </dict>
+          
+          <dict>
+            <key>CFBundleTypeExtensions</key>
+            <array>
+              <string>ts</string>
+            </array>
+            <key>CFBundleTypeName</key>
+            <string>TypeScript source</string>
+            <key>CFBundleTypeRole</key>
+            <string>Editor</string>
+            <key>CFBundleTypeIconFile</key>
+            <string>iconfile</string>
+          </dict>
+          
+          <dict>
+            <key>CFBundleTypeExtensions</key>
+            <array>
+              <string>go</string>
+            </array>
+            <key>CFBundleTypeName</key>
+            <string>Go source</string>
+            <key>CFBundleTypeRole</key>
+            <string>Editor</string>
+            <key>CFBundleTypeIconFile</key>
+            <string>iconfile</string>
+          </dict>
+          
+          <dict>
+            <key>CFBundleTypeExtensions</key>
+            <array>
+              <string>py</string>
+            </array>
+            <key>CFBundleTypeName</key>
+            <string>Python source</string>
+            <key>CFBundleTypeRole</key>
+            <string>Editor</string>
+            <key>CFBundleTypeIconFile</key>
+            <string>iconfile</string>
+          </dict>
+          
+          <dict>
+            <key>CFBundleTypeExtensions</key>
+            <array>
+              <string>rb</string>
+            </array>
+            <key>CFBundleTypeName</key>
+            <string>Ruby source</string>
+            <key>CFBundleTypeRole</key>
+            <string>Editor</string>
+            <key>CFBundleTypeIconFile</key>
+            <string>iconfile</string>
+          </dict>
+          
+          <dict>
+            <key>CFBundleTypeExtensions</key>
+            <array>
+              <string>rs</string>
+            </array>
+            <key>CFBundleTypeName</key>
+            <string>Rust source</string>
+            <key>CFBundleTypeRole</key>
+            <string>Editor</string>
+            <key>CFBundleTypeIconFile</key>
+            <string>iconfile</string>
+          </dict>
+          
+          <dict>
+            <key>CFBundleTypeExtensions</key>
+            <array>
+              <string>c</string>
+            </array>
+            <key>CFBundleTypeName</key>
+            <string>C source</string>
+            <key>CFBundleTypeRole</key>
+            <string>Editor</string>
+            <key>CFBundleTypeIconFile</key>
+            <string>iconfile</string>
+          </dict>
+          
+          <dict>
+            <key>CFBundleTypeExtensions</key>
+            <array>
+              <string>h</string>
+            </array>
+            <key>CFBundleTypeName</key>
+            <string>C header</string>
+            <key>CFBundleTypeRole</key>
+            <string>Editor</string>
+            <key>CFBundleTypeIconFile</key>
+            <string>iconfile</string>
+          </dict>
+          
+          <dict>
+            <key>CFBundleTypeExtensions</key>
+            <array>
+              <string>cpp</string>
+            </array>
+            <key>CFBundleTypeName</key>
+            <string>C++ source</string>
+            <key>CFBundleTypeRole</key>
+            <string>Editor</string>
+            <key>CFBundleTypeIconFile</key>
+            <string>iconfile</string>
+          </dict>
+          
+          <dict>
+            <key>CFBundleTypeExtensions</key>
+            <array>
+              <string>java</string>
+            </array>
+            <key>CFBundleTypeName</key>
+            <string>Java source</string>
+            <key>CFBundleTypeRole</key>
+            <string>Editor</string>
+            <key>CFBundleTypeIconFile</key>
+            <string>iconfile</string>
+          </dict>
+          
+          <dict>
+            <key>CFBundleTypeExtensions</key>
+            <array>
+              <string>sh</string>
+            </array>
+            <key>CFBundleTypeName</key>
+            <string>Shell script</string>
+            <key>CFBundleTypeRole</key>
+            <string>Editor</string>
+            <key>CFBundleTypeIconFile</key>
+            <string>iconfile</string>
+          </dict>
+          
+          <dict>
+            <key>CFBundleTypeExtensions</key>
+            <array>
+              <string>bash</string>
+            </array>
+            <key>CFBundleTypeName</key>
+            <string>Shell script</string>
+            <key>CFBundleTypeRole</key>
+            <string>Editor</string>
+            <key>CFBundleTypeIconFile</key>
+            <string>iconfile</string>
+          </dict>
+          
+          <dict>
+            <key>CFBundleTypeExtensions</key>
+            <array>
+              <string>zsh</string>
+            </array>
+            <key>CFBundleTypeName</key>
+            <string>Shell script</string>
+            <key>CFBundleTypeRole</key>
+            <string>Editor</string>
+            <key>CFBundleTypeIconFile</key>
+            <string>iconfile</string>
+          </dict>
+          
+          <dict>
+            <key>CFBundleTypeExtensions</key>
+            <array>
+              <string>sql</string>
+            </array>
+            <key>CFBundleTypeName</key>
+            <string>SQL source</string>
+            <key>CFBundleTypeRole</key>
+            <string>Editor</string>
+            <key>CFBundleTypeIconFile</key>
+            <string>iconfile</string>
+          </dict>
+          
+          <dict>
+            <key>CFBundleTypeExtensions</key>
+            <array>
+              <string>swift</string>
+            </array>
+            <key>CFBundleTypeName</key>
+            <string>Swift source</string>
+            <key>CFBundleTypeRole</key>
+            <string>Editor</string>
+            <key>CFBundleTypeIconFile</key>
+            <string>iconfile</string>
+          </dict>
+          
+          <dict>
+            <key>CFBundleTypeExtensions</key>
+            <array>
+              <string>kt</string>
+            </array>
+            <key>CFBundleTypeName</key>
+            <string>Kotlin source</string>
+            <key>CFBundleTypeRole</key>
+            <string>Editor</string>
+            <key>CFBundleTypeIconFile</key>
+            <string>iconfile</string>
+          </dict>
+          
+          <dict>
+            <key>CFBundleTypeExtensions</key>
+            <array>
+              <string>php</string>
+            </array>
+            <key>CFBundleTypeName</key>
+            <string>PHP source</string>
+            <key>CFBundleTypeRole</key>
+            <string>Editor</string>
+            <key>CFBundleTypeIconFile</key>
+            <string>iconfile</string>
+          </dict>
+          
+          <dict>
+            <key>CFBundleTypeExtensions</key>
+            <array>
+              <string>lua</string>
+            </array>
+            <key>CFBundleTypeName</key>
+            <string>Lua source</string>
+            <key>CFBundleTypeRole</key>
+            <string>Editor</string>
+            <key>CFBundleTypeIconFile</key>
+            <string>iconfile</string>
+          </dict>
+          
+          <dict>
+            <key>CFBundleTypeExtensions</key>
+            <array>
+              <string>env</string>
+            </array>
+            <key>CFBundleTypeName</key>
+            <string>Environment file</string>
+            <key>CFBundleTypeRole</key>
+            <string>Editor</string>
+            <key>CFBundleTypeIconFile</key>
+            <string>iconfile</string>
+          </dict>
+          
+          <dict>
+            <key>CFBundleTypeExtensions</key>
+            <array>
+              <string>gitignore</string>
+            </array>
+            <key>CFBundleTypeName</key>
+            <string>Git ignore file</string>
+            <key>CFBundleTypeRole</key>
+            <string>Editor</string>
+            <key>CFBundleTypeIconFile</key>
+            <string>iconfile</string>
+          </dict>
+          
+          <dict>
+            <key>CFBundleTypeExtensions</key>
+            <array>
+              <string>properties</string>
+            </array>
+            <key>CFBundleTypeName</key>
+            <string>Properties file</string>
+            <key>CFBundleTypeRole</key>
+            <string>Editor</string>
+            <key>CFBundleTypeIconFile</key>
+            <string>iconfile</string>
+          </dict>
+          
+        </array>
+        
+        
+    </dict>
+</plist>
