@@ -4,8 +4,8 @@
 
 Do not open public issues for security problems.
 
-Email **security@xtracsys.com** (placeholder until an official security
-address is published) with details, reproduction steps, and affected commits.
+Email **opensource@xtracsys.com** with details, reproduction steps, and
+affected commits.
 You will receive an acknowledgement within 72 hours. Please avoid public
 disclosure until a fix is released; we will credit reporters in the release
 notes unless you prefer otherwise.
