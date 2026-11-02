@@ -50,9 +50,11 @@ approved that release and the current CI run is green.
 
 Watch the Actions tab after pushing. The initial public run at `13aad54` had
 three test jobs fail before the suites started because `frontend/dist` was
-missing when Go evaluated its embed directive; the security scan passed. The
-workflow now builds the frontend before Go checks. Require a later green test
-run and security scan before publishing a release.
+missing when Go evaluated its embed directive. The follow-up at `94cc6b2` got
+past that issue but macOS E2E could not load `@playwright/test`, because root
+E2E dependencies had not been installed. The workflow now builds the frontend
+before Go checks and installs root dependencies before E2E. Require a later
+green test run and security scan before publishing a release.
 
 ## 4. Create an explicitly approved GitHub release
 

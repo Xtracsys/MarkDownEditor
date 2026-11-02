@@ -30,8 +30,11 @@ The public run for commit `13aad54` (2026-11-01) failed all three
 OS test jobs before the Go, frontend, or E2E suites could run. Go's
 `//go:embed all:frontend/dist` requires the compiled frontend bundle, but the
 workflow ran Go checks before `npm run build`. The security scan passed. The
-workflow now builds the frontend before running Go checks; a successful run on
-the updated commit is still required before calling public CI green.
+workflow now builds the frontend before running Go checks. The follow-up run
+at `94cc6b2` got past those stages but the macOS E2E step could not load
+`@playwright/test`: CI had installed only the frontend package, not the root
+E2E dependencies. The workflow now installs the root package before E2E; a
+subsequent green run is still required before calling public CI green.
 
 ## Known limitations & blockers (stated plainly)
 
@@ -40,9 +43,10 @@ the updated commit is still required before calling public CI green.
    tests all three OSes headlessly, but “it compiles and the headless suites
    pass” is not “it works”. Until someone runs those builds interactively,
    treat those platforms as unverified.
-2. **Public CI has not passed yet.** The initial GitHub Actions run failed
-   before tests because the frontend bundle was missing at Go embed time; see
-   the current status above. The reordered workflow needs a green run.
+2. **Public CI has not passed yet.** The initial run failed at Go embed time;
+   the follow-up reached E2E but lacked the root Playwright dependency. Both
+   workflow ordering and dependency installation are corrected; a green run is
+   still required.
 3. **Code signing / notarization** for macOS and Windows requires certificates
    that are not available in this environment. macOS builds are ad-hoc signed
    (Gatekeeper will show an “unidentified developer” prompt for local builds;
