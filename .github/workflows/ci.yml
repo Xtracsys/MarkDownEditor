@@ -44,9 +44,6 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev
 
-      - name: Go tests (file-integrity core + settings + image sandbox)
-        run: go vet ./... && go test ./... -race -count=1
-
       - name: Frontend install + typecheck + unit tests
         working-directory: frontend
         run: |
@@ -54,9 +51,12 @@ jobs:
           npx tsc --noEmit
           npx vitest run
 
-      - name: Build frontend bundle (for E2E and packaging)
+      - name: Build frontend bundle (for Go embed, E2E, and packaging)
         working-directory: frontend
         run: npm run build
+
+      - name: Go tests (file-integrity core + settings + image sandbox)
+        run: go vet ./... && go test ./... -race -count=1
 
       - name: Fail on file-provider conflict copies in embedded assets
         if: runner.os == 'macOS'

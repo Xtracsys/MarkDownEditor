@@ -2,7 +2,7 @@
 
 Honest, per-platform status. This file is updated with every release
 candidate; a platform is only marked tested when a human has actually used
-that build. Last updated: 2026-10-24 (v0.1.0 development).
+that build. Last updated: 2026-11-01 (public CI status).
 
 ## Legend
 
@@ -24,6 +24,15 @@ that build. Last updated: 2026-10-24 (v0.1.0 development).
 | **Packaging** | `.app` bundle ✅; DMG not produced yet | `.exe` via CI; NSIS installer not configured | binary; AppImage/deb not configured |
 | **Signing** | Ad-hoc only. Developer-ID signing and notarization **not performed** — requires an Apple Developer certificate | Unsigned; Authenticode requires a certificate | N/A |
 
+## Current GitHub Actions status
+
+The public run for commit `13aad54` (2026-11-01) failed all three
+OS test jobs before the Go, frontend, or E2E suites could run. Go's
+`//go:embed all:frontend/dist` requires the compiled frontend bundle, but the
+workflow ran Go checks before `npm run build`. The security scan passed. The
+workflow now builds the frontend before running Go checks; a successful run on
+the updated commit is still required before calling public CI green.
+
 ## Known limitations & blockers (stated plainly)
 
 1. **Windows and Linux have not been run on real hardware yet.** The code is
@@ -31,9 +40,9 @@ that build. Last updated: 2026-10-24 (v0.1.0 development).
    tests all three OSes headlessly, but “it compiles and the headless suites
    pass” is not “it works”. Until someone runs those builds interactively,
    treat those platforms as unverified.
-2. **CI workflows are written but not executed** — publishing the repository
-   (and thus triggering GitHub Actions) awaits explicit approval per the
-   project brief.
+2. **Public CI has not passed yet.** The initial GitHub Actions run failed
+   before tests because the frontend bundle was missing at Go embed time; see
+   the current status above. The reordered workflow needs a green run.
 3. **Code signing / notarization** for macOS and Windows requires certificates
    that are not available in this environment. macOS builds are ad-hoc signed
    (Gatekeeper will show an “unidentified developer” prompt for local builds;

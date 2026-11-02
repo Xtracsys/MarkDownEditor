@@ -12,6 +12,17 @@
 | Profiles not applied | 1 Hosted web/API (no server in the shipped app; the loopback e2e bridge is a dev tool audited separately), 2 Identity (no accounts), 4 Payments/email (none), 6 AI/agents (none), 8 Public web (no public site — the GitHub repo page is out of scope for app checks) |
 | Constraints | ExFAT working volume (no Unix permissions; AppleDouble/xattr churn; writes can stall under load). macOS-only hardware. Playwright is the executed-UI channel; native window behaviors need the manual checklist. |
 
+## Post-publication status — 2026-11-01
+
+This report records local source and artifact readiness; its `READY` verdict is
+not a claim that GitHub CI passed or that a public release was published. The
+source repository is public, but GitHub currently has no tags, releases, or
+packages (local tags `v0.1.6` and `v0.1.7` have not been pushed). The initial
+public Actions run at `13aad54` passed security scans but failed all three OS
+test jobs before tests because the workflow evaluated the Go embed before
+building `frontend/dist`. The workflow order is corrected; a green run is still
+required before release publication.
+
 ## 1. Scope and constraints
 
 Full checklist (Parts A–C + profiles 3/5/7) on the source repository, its test
@@ -114,8 +125,9 @@ claims 134/134 tracked files (the registry article covers the report).
 
 ## 8. Remaining human decisions and untested scope
 
-- Publish the repository and push tag `v0.1.7` — owner (runbook:
-  docs/PUBLISHING.md).
+- Publish the `v0.1.7` tag and GitHub release — owner, after the updated public
+  CI run is green and release publication is explicitly approved (runbook:
+  docs/PUBLISHING.md). The source repository is already public.
 - Code-signing certificates (macOS notarization, Windows Authenticode) — owner.
 - Windows/Linux hardware verification — owner (manual checklist in
   docs/PLATFORM-STATUS.md).

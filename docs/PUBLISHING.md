@@ -1,7 +1,8 @@
 # Publishing Runbook
 
-The repository is prepared for public GitHub upload. This page is the exact
-checklist — follow it in order. Estimated time: 15 minutes.
+The source repository is already public at
+https://github.com/Xtracsys/MarkDownEditor. This page covers versioned releases
+and binary publishing; it is not an initial repository-creation checklist.
 
 ## 0. Preconditions (already done)
 
@@ -10,11 +11,16 @@ checklist — follow it in order. Estimated time: 15 minutes.
       the deb maintainer field.
 - [x] Apache-2.0 license text in `LICENSE`; trademark boundary in
       `TRADEMARKS.md`; third-party notices in `THIRD-PARTY-NOTICES.md`.
-- [x] `CHANGELOG.md` covers 0.1.0–0.1.6; the repo is tagged `v0.1.6`.
+- [x] `CHANGELOG.md` covers 0.1.0–0.1.6.
+- [ ] No GitHub tags, releases, or packages have been published. Local tags
+      `v0.1.6` and `v0.1.7` are not published tags.
 - [x] GitHub templates: PR integrity checklist, bug report, feature request;
       CI workflow (3-OS test + package + security jobs) on push/PR.
-- [x] Scanners clean: govulncheck 0, npm audit 0 (production), secrets sweep
-      0 true positives, no large stray binaries in git.
+- [x] Scanners clean in the recorded local readiness review: govulncheck 0,
+      npm audit 0 (production), secrets sweep 0 true positives, no large stray
+      binaries in git.
+- [ ] Public CI must pass on the current `main` commit before a release; the
+      initial run at `13aad54` failed before tests due to frontend embed order.
 
 ## 1. Pre-flight (current — 2026-11-01)
 
@@ -28,47 +34,34 @@ on the internal disk. If anything happens to this volume before the new
 APFS drive arrives: `git clone ~/Backups/xtracsys-editor-2026-10-31.bundle`
 restores everything.
 
-## 2. Create the repository and push
+## 2. Push source updates
 
-The Go module path is `github.com/xtracsys/xtracsys-editor` — create the repo
-at that exact path (under the `xtracsys` user or org) or rename the module
-first.
-
-```sh
-gh auth login                                    # once
-gh repo create xtracsys-editor --public --source=. --push
-git push origin v0.1.6                           # the release tag
-```
-
-If you prefer not to use `gh`:
+The existing public repository is `Xtracsys/MarkDownEditor`. Push source
+updates to `main` after reviewing the local change:
 
 ```sh
-git remote add origin https://github.com/<owner>/xtracsys-editor.git
-git push -u origin main
-git push origin v0.1.6
+git push origin main
 ```
+
+Do not publish a version tag, GitHub release, or package until the owner has
+approved that release and the current CI run is green.
 
 ## 3. Verify CI on all three OSes
 
-Watch `gh run watch` or the Actions tab. Expected: test + package + security
-jobs on macOS/Ubuntu/Windows. First-run failures on Windows/Linux are
-possible (this machine is macOS-only) — fix-forward; the packaging steps are
-the likeliest culprits.
+Watch the Actions tab after pushing. The initial public run at `13aad54` had
+three test jobs fail before the suites started because `frontend/dist` was
+missing when Go evaluated its embed directive; the security scan passed. The
+workflow now builds the frontend before Go checks. Require a later green test
+run and security scan before publishing a release.
 
-## 4. Create the GitHub release
+## 4. Create an explicitly approved GitHub release
 
-```sh
-gh release create v0.1.6 \
-  dist/xtracsys-editor-0.1.6-macos-universal.dmg \
-  dist/xtracsys-editor-0.1.6-windows-x64-setup.exe \
-  dist/xtracsys-editor-0.1.6-windows-x64.zip \
-  dist/SHA256SUMS.txt \
-  --title "Xtracsys Editor 0.1.6" \
-  --notes-file docs/RELEASE-NOTES-0.1.6.md
-```
-
-Alternatively upload the artifacts manually from `dist/`. Keep
-`SHA256SUMS.txt` attached — it is the integrity anchor for the binaries.
+Only after the owner approves a release, the current `main` CI run is green,
+and matching release notes and artifacts have been prepared and verified,
+create the GitHub release. Attach the exact artifacts produced by
+`scripts/build-all.sh` for the approved version, plus `dist/SHA256SUMS.txt`,
+and use the matching `docs/RELEASE-NOTES-<version>.md` file. No release
+artifacts are currently published.
 
 ## 5. Post-publish
 
