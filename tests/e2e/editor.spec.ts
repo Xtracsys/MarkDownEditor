@@ -13,6 +13,19 @@ import { resolve, join } from "node:path";
 
 const docs = resolve(__dirname, ".fixtures");
 
+async function waitForAppHook(page: Page) {
+  await page.waitForFunction(() =>
+    !!(window as never as { __xe?: { ready?: Promise<void> } }).__xe?.ready,
+  );
+}
+
+async function waitForAppReady(page: Page) {
+  await waitForAppHook(page);
+  await page.evaluate(async () => {
+    await (window as never as { __xe: { ready: Promise<void> } }).__xe.ready;
+  });
+}
+
 test.beforeAll(() => {
   rmSync(docs, { recursive: true, force: true });
   mkdirSync(join(docs, "assets"), { recursive: true });
@@ -53,7 +66,7 @@ test.beforeAll(() => {
 
 async function openApp(page: Page) {
   await page.goto("/?e2e=1");
-  await page.waitForFunction(() => !!(window as never as { __xe?: unknown }).__xe);
+  await waitForAppReady(page);
 }
 
 async function openFile(page: Page, path: string, opts: { waitForTab?: boolean } = {}) {
@@ -420,7 +433,7 @@ test("crash recovery is opt-in: disabled by default, enabled restores work", asy
   await page.keyboard.type("PRECIOUS ");
   await page.waitForTimeout(6000);
   await page.reload();
-  await page.waitForFunction(() => !!(window as never as { __xe?: unknown }).__xe);
+  await waitForAppReady(page);
   await page.waitForTimeout(1200);
   const modal = page.locator(".modal");
   await expect(modal).toBeVisible({ timeout: 8000 });
@@ -432,7 +445,7 @@ test("crash recovery is opt-in: disabled by default, enabled restores work", asy
   await expect(page.locator(".tab.dirty")).toHaveCount(1);
   // Snapshot consumed: second reload offers nothing.
   await page.reload();
-  await page.waitForFunction(() => !!(window as never as { __xe?: unknown }).__xe);
+  await waitForAppReady(page);
   await page.waitForTimeout(1500);
   await expect(page.locator(".modal")).toHaveCount(0);
 });
@@ -459,15 +472,17 @@ test("documents opened with the app externally arrive in the editor", async ({ p
 
   // Queue before UI-ready flushes on startup (argv/Open-With during launch).
   await page.reload();
-  await page.waitForTimeout(300); // let the fresh app boot to its Untitled tab
+  await waitForAppHook(page);
   await page.evaluate(async (p) => {
     await fetch("/api/QueueExternalOpen", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ args: [[p]] }),
     });
-    // The app already marked itself ready in start(); queued paths flush live.
+    // If startup has not completed, the queued path flushes when the app
+    // marks itself ready; otherwise it is delivered live.
   }, file);
+  await waitForAppReady(page);
   await expect(page.locator(".tab.active")).toContainText(name, { timeout: 8000 });
 });
 
@@ -500,8 +515,7 @@ test("session restore reopens the last session's documents", async ({ page }) =>
     }
   }, file);
   await page.reload();
-  await page.waitForFunction(() => !!(window as never as { __xe?: unknown }).__xe);
-  await page.waitForTimeout(1500); // startup: recovery check + session restore
+  await waitForAppReady(page);
   // The shared bridge home may hold a longer session from earlier tests —
   // the contract is that session.md is among the restored tabs.
   const name = file.split("/").pop() || file;
@@ -537,8 +551,7 @@ test("restore-session setting controls whether the session reopens", async ({ pa
     }, { timeout: 8000 })
     .toBe(false);
   await page.reload();
-  await page.waitForFunction(() => !!(window as never as { __xe?: unknown }).__xe);
-  await page.waitForTimeout(1200);
+  await waitForAppReady(page);
   const name = file.split("/").pop() || file;
   try {
     await expect(page.locator(".tab.active")).toContainText("Untitled", { timeout: 8000 });

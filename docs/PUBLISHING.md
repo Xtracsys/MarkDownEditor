@@ -48,13 +48,12 @@ approved that release and the current CI run is green.
 
 ## 3. Verify CI on all three OSes
 
-Watch the Actions tab after pushing. The initial public run at `13aad54` had
-three test jobs fail before the suites started because `frontend/dist` was
-missing when Go evaluated its embed directive. The follow-up at `94cc6b2` got
-past that issue but macOS E2E could not load `@playwright/test`, because root
-E2E dependencies had not been installed. The workflow now builds the frontend
-before Go checks and installs root dependencies before E2E. Require a later
-green test run and security scan before publishing a release.
+Watch the Actions tab after pushing. The initial run at `13aad54` failed at
+Go embed time; `94cc6b2` exposed a missing root Playwright install. Run
+`baedc61` then passed Ubuntu, but exposed a macOS session-restore startup race
+and a Windows-only FIFO test compile error. The workflow order and installs,
+E2E readiness, and platform-specific FIFO setup are now corrected. Require a
+later green test matrix and security scan before publishing a release.
 
 ## 4. Create an explicitly approved GitHub release
 

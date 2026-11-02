@@ -6,9 +6,7 @@ package fileio
 import (
 	"os"
 	"path/filepath"
-	"runtime"
 	"strings"
-	"syscall"
 	"testing"
 )
 
@@ -196,14 +194,9 @@ func TestLoadRefusesTooManyLines(t *testing.T) {
 }
 
 func TestLoadRefusesNonRegularFile(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skip("no fifo on windows")
-	}
 	dir := t.TempDir()
 	fifo := filepath.Join(dir, "pipe")
-	if err := syscall.Mkfifo(fifo, 0o600); err != nil {
-		t.Skipf("mkfifo unavailable: %v", err)
-	}
+	createTestFIFO(t, fifo)
 	_, issue := Load(fifo)
 	if issue == nil || issue.Reason != "not-regular" {
 		t.Fatalf("issue = %+v, want not-regular", issue)

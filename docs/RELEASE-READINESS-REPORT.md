@@ -20,10 +20,11 @@ source repository is public, but GitHub currently has no tags, releases, or
 packages (local tags `v0.1.6` and `v0.1.7` have not been pushed). The initial
 public Actions run at `13aad54` passed security scans but failed all three OS
 test jobs before tests because the workflow evaluated the Go embed before
-building `frontend/dist`. The follow-up at `94cc6b2` passed that stage but
-macOS E2E could not load the root `@playwright/test` dependency. The workflow
-now builds the frontend first and installs root E2E dependencies; a green run
-is still required before release publication.
+building `frontend/dist`. Run `94cc6b2` exposed the missing root
+`@playwright/test` install. Run `baedc61` passed Ubuntu, but found a macOS
+session-restore startup race and a Windows FIFO-test compile error. Those CI
+setup and test-harness issues are corrected; a green run is still required
+before release publication.
 
 ## 1. Scope and constraints
 

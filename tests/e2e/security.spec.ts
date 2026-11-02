@@ -12,6 +12,15 @@ import { resolve, join } from "node:path";
 
 const docs = resolve(__dirname, ".secfixtures");
 
+async function waitForAppReady(page: Page) {
+  await page.waitForFunction(() =>
+    !!(window as never as { __xe?: { ready?: Promise<void> } }).__xe?.ready,
+  );
+  await page.evaluate(async () => {
+    await (window as never as { __xe: { ready: Promise<void> } }).__xe.ready;
+  });
+}
+
 const XSS_VECTORS: [string, string][] = [
   ["inline script", "<script>alert('x1')</script>\n\nafter"],
   ["img onerror", `![x](x" onerror="alert('x2')>.png)`],
@@ -56,7 +65,7 @@ test.describe("dynamic security: preview XSS battery", () => {
 
     page = await browser.newPage({ viewport: { width: 1280, height: 840 } });
     await page.goto("/?e2e=1");
-    await page.waitForFunction(() => !!(window as never as { __xe?: unknown }).__xe);
+    await waitForAppReady(page);
     // Keep the boot-time session restore out of the security assertions.
     await page.evaluate(async () => {
       await fetch("/api/ClearSession", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ args: [] }) });
@@ -79,7 +88,7 @@ test.describe("dynamic security: preview XSS battery", () => {
 
   test("entire XSS battery: nothing executes, navigates, or leaves the machine", async () => {
     await page.goto("/?e2e=1");
-    await page.waitForFunction(() => !!(window as never as { __xe?: unknown }).__xe);
+    await waitForAppReady(page);
     await page.evaluate((p) => {
       void (window as never as { __xe: { app: { openPaths(p: string[]): Promise<void> } } })
         .__xe.app.openPaths([p]);
@@ -152,7 +161,7 @@ test.describe("dynamic security: preview XSS battery", () => {
     // is what a marked+DOMPurify bypass attempt would face. The sink must
     // remain inert regardless.
     await page.goto("/?e2e=1");
-    await page.waitForFunction(() => !!(window as never as { __xe?: unknown }).__xe);
+    await waitForAppReady(page);
 
     await page.evaluate(() => {
       const w = window as never as { __xe: { app: { openPaths(p: string[]): Promise<void> } } };
@@ -172,7 +181,7 @@ test.describe("dynamic security: preview XSS battery", () => {
     const f = join(docs, "scheme.md");
     writeFileSync(f, "[mail](mailto:x@y.z)\n[tel](tel:+123)\n[web](https://example.com/ok)\n", "utf8");
     await page.goto("/?e2e=1");
-    await page.waitForFunction(() => !!(window as never as { __xe?: unknown }).__xe);
+    await waitForAppReady(page);
     await page.evaluate((p) => {
       void (window as never as { __xe: { app: { openPaths(p: string[]): Promise<void> } } })
         .__xe.app.openPaths([p]);
