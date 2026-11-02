@@ -19,8 +19,9 @@ and binary publishing; it is not an initial repository-creation checklist.
 - [x] Scanners clean in the recorded local readiness review: govulncheck 0,
       npm audit 0 (production), secrets sweep 0 true positives, no large stray
       binaries in git.
-- [ ] Public CI must pass on the current `main` commit before a release; the
-      initial run at `13aad54` failed before tests due to frontend embed order.
+- [ ] Public CI must pass on the current `main` commit before a release. Run
+      `88d846d` passed all three test jobs and security scans, but macOS DMG
+      packaging failed because Pillow was missing; the workflow now installs it.
 
 ## 1. Pre-flight (current — 2026-11-01)
 
@@ -48,11 +49,10 @@ approved that release and the current CI run is green.
 
 ## 3. Verify CI on all three OSes
 
-Watch the Actions tab after pushing. Run 815b497 passed the macOS, Ubuntu, and
-security jobs. Windows Go and frontend checks passed and the E2E server started,
-but 21 E2E checks failed because path assertions did not account for Windows
-separators; the package job was skipped. The path helpers and frontend filename
-handling are corrected in the pending update. Require a green test matrix and
+Watch the Actions tab after pushing. Run 88d846d passed all three OS test
+jobs, including Windows E2E, and the security scan. The macOS app bundle built,
+but DMG packaging failed because Pillow was missing; the workflow now installs
+it before creating the DMG. Require a green test matrix, package jobs, and
 security scan before publishing a release.
 
 ## 4. Create an explicitly approved GitHub release

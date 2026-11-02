@@ -39,11 +39,11 @@ of 0600/0644), so package jobs were skipped. Run 54362b6 passed macOS, Ubuntu,
 and security scans; Windows Go tests passed, but its E2E server could not start
 because the Playwright command used Unix environment-variable syntax. The
 server now receives that variable through Playwright's environment setting.
-Run 815b497 passed macOS, Ubuntu, and security scans. Windows Go and frontend
-checks passed and its E2E server started; 21 E2E checks failed because a test
-helper compared a full Windows path with the filename shown in the tab. Path
-handling has been corrected in the pending update; a green run is still
-required. The package job was skipped.
+Run 88d846d passed all three OS test jobs, including all 27 Windows E2E
+checks, and the security scan. The macOS app bundle built, but DMG packaging
+failed because the workflow had not installed Pillow for the background-image
+script. The current workflow update installs Pillow before DMG creation; a
+green package run is still required.
 
 ## Known limitations & blockers (stated plainly)
 
@@ -52,11 +52,10 @@ required. The package job was skipped.
    tests all three OSes headlessly, but “it compiles and the headless suites
    pass” is not “it works”. Until someone runs those builds interactively,
    treat those platforms as unverified.
-2. **Public CI has not passed yet.** The latest completed run, 815b497, passed
-   macOS, Ubuntu, and security scans. Windows Go and frontend checks passed,
-   but its E2E tests failed on a Windows path comparison in the test helpers.
-   The helper and frontend path handling have been corrected; a green run is
-   still required.
+2. **Public CI has not passed yet.** Run 88d846d passed the macOS, Ubuntu,
+   and Windows test jobs plus security scans. Its macOS app build succeeded,
+   but DMG packaging failed because Pillow was missing. The workflow now installs
+   that dependency; a green package run is still required.
 3. **Code signing / notarization** for macOS and Windows requires certificates
    that are not available in this environment. macOS builds are ad-hoc signed
    (Gatekeeper will show an “unidentified developer” prompt for local builds;
