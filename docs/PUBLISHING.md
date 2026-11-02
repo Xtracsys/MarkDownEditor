@@ -48,12 +48,11 @@ approved that release and the current CI run is green.
 
 ## 3. Verify CI on all three OSes
 
-Watch the Actions tab after pushing. Run c13a3e1 passed the macOS and
-Ubuntu jobs and security scan, but Windows reached tests and failed on three
-POSIX file-mode assertions; package jobs were skipped. The workflow order,
-dependency installs, E2E readiness, FIFO test selection, and platform-aware
-mode checks are corrected. Require a later green test matrix and security scan
-before publishing a release.
+Watch the Actions tab after pushing. Run 54362b6 passed the macOS, Ubuntu,
+and security jobs; Windows Go tests passed, but the E2E server failed to start
+because its command used Unix-only environment-variable syntax. The Playwright
+config now passes that variable through its environment setting. Require a
+later green test matrix and security scan before publishing a release.
 
 ## 4. Create an explicitly approved GitHub release
 

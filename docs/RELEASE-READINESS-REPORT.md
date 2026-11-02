@@ -21,11 +21,13 @@ packages (local tags `v0.1.6` and `v0.1.7` have not been pushed). The initial
 public Actions run at 13aad54 passed security scans but failed all three OS
 test jobs before tests because the workflow evaluated the Go embed before
 building frontend/dist. Run 94cc6b2 exposed the missing root Playwright
-install. Run baedc61 passed Ubuntu but found a macOS session-restore startup
-race and a Windows FIFO-test compile error. Run c13a3e1 passed macOS (including
-E2E), Ubuntu, and security scans; Windows then failed three POSIX file-mode
-assertions. The test harness and platform checks are corrected, pending a
-later green run before release publication.
+install. Run baedc61 passed Ubuntu but found a macOS session-restore race and
+a Windows FIFO-test compile error. Run c13a3e1 passed macOS (including E2E),
+Ubuntu, and security scans; Windows then failed POSIX file-mode assertions.
+Run 54362b6 passed macOS, Ubuntu, and security scans, and Windows Go tests,
+but Windows E2E could not start its server due to Unix-only environment
+syntax. The config now uses Playwright's environment setting; a later green
+run is still required before release publication.
 
 ## 1. Scope and constraints
 

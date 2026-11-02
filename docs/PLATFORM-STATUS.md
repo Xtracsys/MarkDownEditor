@@ -31,16 +31,15 @@ because Go evaluated the embed directive before the frontend build; the
 security scan passed. Run 94cc6b2 got past embed but exposed the missing root
 Playwright install.
 
-Run baedc61 confirmed the workflow setup and surfaced two platform issues:
-Ubuntu passed; macOS reached E2E (26/27 tests passed) but the session-restore
-case raced Application.start; Windows could not compile the FIFO test because
-syscall.Mkfifo is unavailable there. Run c13a3e1 passed Ubuntu and macOS
-(including all E2E tests) and the security scan. Windows compiled, then exposed
-three assertions that assumed POSIX file-mode bits (0600/0644), which Go does
-not report on Windows (0666 was observed). Package jobs were skipped because
-Windows failed. Startup waits and OS-specific FIFO setup are corrected;
-mode-bit checks are now limited to POSIX, and docs describe Windows' inherited
-per-user app-data ACL behavior. A later green run is still required.
+Run baedc61 confirmed the workflow setup and surfaced a macOS session-restore
+race and a Windows FIFO-test compile error; Ubuntu passed. Run c13a3e1 passed
+Ubuntu and macOS (including all E2E tests) and the security scan. Windows
+compiled but exposed POSIX-only file-mode assertions (Go reported 0666 instead
+of 0600/0644), so package jobs were skipped. Run 54362b6 passed macOS, Ubuntu,
+and security scans; Windows Go tests passed, but its E2E server could not start
+because the Playwright command used Unix environment-variable syntax. The
+server now receives that variable through Playwright's environment setting.
+A later green run is still required.
 
 ## Known limitations & blockers (stated plainly)
 
@@ -49,10 +48,10 @@ per-user app-data ACL behavior. A later green run is still required.
    tests all three OSes headlessly, but “it compiles and the headless suites
    pass” is not “it works”. Until someone runs those builds interactively,
    treat those platforms as unverified.
-2. **Public CI has not passed yet.** The initial embed order and missing E2E
-   install are corrected. Run c13a3e1 passed macOS, Ubuntu, and security scans,
-   but Windows exposed POSIX-only mode assertions. Those checks are now
-   platform-aware; a green run is still required.
+2. **Public CI has not passed yet.** The latest run, 54362b6, passed macOS,
+   Ubuntu, and security scans. Windows Go tests passed, but its E2E server
+   could not start due to Unix-only environment-variable syntax. The config
+   now passes that variable through Playwright; a green run is still required.
 3. **Code signing / notarization** for macOS and Windows requires certificates
    that are not available in this environment. macOS builds are ad-hoc signed
    (Gatekeeper will show an “unidentified developer” prompt for local builds;
