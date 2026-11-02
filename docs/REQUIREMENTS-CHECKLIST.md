@@ -79,11 +79,12 @@ and how it is verified. Verification codes: **[T]** automated test,
   never touch the file”
 - Crash recovery: **opt-in setting, off by default** (snapshots are
   plaintext document content at rest — a privacy-first editor does not
-  create them unasked). Dirty buffers snapshot to app-data only (0600,
-  atomic), disclosed in Settings/README, restored as unsaved tabs after a
-  crash; disabling the setting erases stored snapshots, and startup erases
-  leftovers from older builds — **[T]** internal/recovery + app gating
-  tests; **[E2E]** off-by-default gate + opt-in restore flow
+  create them unasked). Dirty buffers snapshot to app-data only (0600 on
+  POSIX; on Windows, access follows the parent directory's ACL). Writes are
+  atomic, disclosed in Settings/README, and restored as unsaved tabs after a
+  crash. Disabling the setting erases stored snapshots, and startup erases
+  leftovers from older builds — **[T]** internal/recovery + app gating tests;
+  **[E2E]** off-by-default gate + opt-in restore flow
 - Save failures shown clearly; never reported as success — **[D]** SaveResponse
   always carries the failure; **[E2E]** external-change decision flow
 

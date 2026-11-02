@@ -6,6 +6,7 @@ package recovery
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 	"time"
 )
@@ -84,6 +85,9 @@ func TestCorruptAndForeignFilesIgnored(t *testing.T) {
 }
 
 func TestPermissionsArePrivate(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Windows inherits access control lists; Go does not expose POSIX mode bits")
+	}
 	s := newStore(t)
 	if err := s.Save(Entry{ID: "t1", Content: "secret-ish"}); err != nil {
 		t.Fatal(err)

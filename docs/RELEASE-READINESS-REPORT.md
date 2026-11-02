@@ -18,13 +18,14 @@ This report records local source and artifact readiness; its `READY` verdict is
 not a claim that GitHub CI passed or that a public release was published. The
 source repository is public, but GitHub currently has no tags, releases, or
 packages (local tags `v0.1.6` and `v0.1.7` have not been pushed). The initial
-public Actions run at `13aad54` passed security scans but failed all three OS
+public Actions run at 13aad54 passed security scans but failed all three OS
 test jobs before tests because the workflow evaluated the Go embed before
-building `frontend/dist`. Run `94cc6b2` exposed the missing root
-`@playwright/test` install. Run `baedc61` passed Ubuntu, but found a macOS
-session-restore startup race and a Windows FIFO-test compile error. Those CI
-setup and test-harness issues are corrected; a green run is still required
-before release publication.
+building frontend/dist. Run 94cc6b2 exposed the missing root Playwright
+install. Run baedc61 passed Ubuntu but found a macOS session-restore startup
+race and a Windows FIFO-test compile error. Run c13a3e1 passed macOS (including
+E2E), Ubuntu, and security scans; Windows then failed three POSIX file-mode
+assertions. The test harness and platform checks are corrected, pending a
+later green run before release publication.
 
 ## 1. Scope and constraints
 

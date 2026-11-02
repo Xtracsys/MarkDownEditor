@@ -210,9 +210,12 @@ func TestSaveNewFileViaSaveAs(t *testing.T) {
 	if string(got) != "# fresh\n" {
 		t.Fatalf("content: %q", got)
 	}
-	fi, _ := os.Stat(p)
-	if fi.Mode().Perm() != 0o644 {
-		t.Errorf("new file mode = %o, want 644", fi.Mode().Perm())
+	// Windows uses ACLs rather than POSIX permission bits.
+	if runtime.GOOS != "windows" {
+		fi, _ := os.Stat(p)
+		if fi.Mode().Perm() != 0o644 {
+			t.Errorf("new file mode = %o, want 644", fi.Mode().Perm())
+		}
 	}
 }
 

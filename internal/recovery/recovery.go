@@ -9,8 +9,8 @@
 //     never next to documents, never in project directories;
 //   - originals are never touched — restoring produces ordinary dirty tabs
 //     that the user saves deliberately;
-//   - snapshot files are written atomically with 0600 permissions (they can
-//     contain private document content);
+//   - snapshot files are written atomically with 0600 permissions on POSIX;
+//     Windows inherits access control lists from the per-user app-data folder;
 //   - corrupt or foreign files in the folder are ignored, never fatal.
 package recovery
 
@@ -40,7 +40,8 @@ type Store struct {
 	dir string
 }
 
-// New returns a store rooted at <base>/recovery, creating it with 0700.
+// New returns a store rooted at <base>/recovery, creating it with 0700 on POSIX.
+// Windows inherits access control lists from the per-user app-data folder.
 func New(base string) (*Store, error) {
 	dir := filepath.Join(base, "recovery")
 	if err := os.MkdirAll(dir, 0o700); err != nil {

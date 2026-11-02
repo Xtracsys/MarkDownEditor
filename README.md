@@ -97,8 +97,9 @@ Settings and unsaved changes are periodically copied to the app's private
 data folder (never next to your documents, never inside them). If the
 editor crashes or is force-quit, the next start offers to restore them as
 unsaved tabs — **nothing is written to your files until you save**.
-Snapshots are private (0600), cleared on save/close/discard, and turning
-the setting off erases any stored snapshots immediately.
+Snapshots use private mode 0600 on POSIX; Windows inherits the per-user
+app-data ACL. They are cleared on save/close/discard, and turning the setting
+off erases any stored snapshots immediately.
 
 ## Settings & state
 

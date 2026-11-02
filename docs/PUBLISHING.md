@@ -48,12 +48,12 @@ approved that release and the current CI run is green.
 
 ## 3. Verify CI on all three OSes
 
-Watch the Actions tab after pushing. The initial run at `13aad54` failed at
-Go embed time; `94cc6b2` exposed a missing root Playwright install. Run
-`baedc61` then passed Ubuntu, but exposed a macOS session-restore startup race
-and a Windows-only FIFO test compile error. The workflow order and installs,
-E2E readiness, and platform-specific FIFO setup are now corrected. Require a
-later green test matrix and security scan before publishing a release.
+Watch the Actions tab after pushing. Run c13a3e1 passed the macOS and
+Ubuntu jobs and security scan, but Windows reached tests and failed on three
+POSIX file-mode assertions; package jobs were skipped. The workflow order,
+dependency installs, E2E readiness, FIFO test selection, and platform-aware
+mode checks are corrected. Require a later green test matrix and security scan
+before publishing a release.
 
 ## 4. Create an explicitly approved GitHub release
 

@@ -26,18 +26,21 @@ that build. Last updated: 2026-11-01 (public CI status).
 
 ## Current GitHub Actions status
 
-The initial public run for commit `13aad54` failed all three OS test jobs
-because Go evaluated `//go:embed all:frontend/dist` before the frontend build;
-the security scan passed. The follow-up at `94cc6b2` got past the embed stage
-but exposed a missing root Playwright install.
+The initial public run for commit 13aad54 failed all three OS test jobs
+because Go evaluated the embed directive before the frontend build; the
+security scan passed. Run 94cc6b2 got past embed but exposed the missing root
+Playwright install.
 
-Run `baedc61` then confirmed the workflow setup and surfaced two independent
-platform issues: Ubuntu's test job passed; macOS reached E2E (26/27 tests
-passed) but the session-restore case raced `Application.start`; Windows could
-not compile the FIFO test because `syscall.Mkfifo` is unavailable at compile
-time there. Security scans passed; packaging was skipped because the full test
-matrix did not pass. The E2E helpers now await the startup promise, and the FIFO
-test is selected by OS at build time. A later green run is still required.
+Run baedc61 confirmed the workflow setup and surfaced two platform issues:
+Ubuntu passed; macOS reached E2E (26/27 tests passed) but the session-restore
+case raced Application.start; Windows could not compile the FIFO test because
+syscall.Mkfifo is unavailable there. Run c13a3e1 passed Ubuntu and macOS
+(including all E2E tests) and the security scan. Windows compiled, then exposed
+three assertions that assumed POSIX file-mode bits (0600/0644), which Go does
+not report on Windows (0666 was observed). Package jobs were skipped because
+Windows failed. Startup waits and OS-specific FIFO setup are corrected;
+mode-bit checks are now limited to POSIX, and docs describe Windows' inherited
+per-user app-data ACL behavior. A later green run is still required.
 
 ## Known limitations & blockers (stated plainly)
 
@@ -47,9 +50,9 @@ test is selected by OS at build time. A later green run is still required.
    pass” is not “it works”. Until someone runs those builds interactively,
    treat those platforms as unverified.
 2. **Public CI has not passed yet.** The initial embed order and missing E2E
-   install are corrected. Run `baedc61` exposed a macOS session-restore race
-   and a Windows-only FIFO test compile error; both are addressed, pending a
-   green run.
+   install are corrected. Run c13a3e1 passed macOS, Ubuntu, and security scans,
+   but Windows exposed POSIX-only mode assertions. Those checks are now
+   platform-aware; a green run is still required.
 3. **Code signing / notarization** for macOS and Windows requires certificates
    that are not available in this environment. macOS builds are ad-hoc signed
    (Gatekeeper will show an “unidentified developer” prompt for local builds;

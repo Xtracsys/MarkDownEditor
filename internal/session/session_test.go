@@ -6,6 +6,7 @@ package session
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 )
 
@@ -104,6 +105,9 @@ func TestClearRecent(t *testing.T) {
 }
 
 func TestFilePermissions(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Windows inherits access control lists; Go does not expose POSIX mode bits")
+	}
 	s := newStore(t)
 	s.AddRecent("a.md")
 	fi, err := os.Stat(s.file)
