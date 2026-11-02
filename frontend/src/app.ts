@@ -360,7 +360,7 @@ export class Application {
   }
 
   async saveTabAs(tab: Tab): Promise<boolean> {
-    const suggested = tab.info.path ? tab.info.path.split("/").pop()! : tab.markdown ? "Untitled.md" : "Untitled.txt";
+    const suggested = tab.info.path ? tab.fileName() : tab.markdown ? "Untitled.md" : "Untitled.txt";
     const target = await this.backend.pickSaveAsPath(suggested).catch((e) => {
       this.saveCanceled = true;
       toast("Save dialog unavailable", String(e));
@@ -1131,7 +1131,7 @@ export class Application {
     }
     if (!entries || !entries.length) return;
     const names = entries.map((e) => {
-      const name = e.path ? e.path.split("/").pop() || e.path : "Untitled";
+      const name = e.path ? e.path.replace(/\\/g, "/").split("/").pop() || e.path : "Untitled";
       return `• ${name}${e.path ? "" : " (never saved)"} — recovered copy from ${new Date(e.savedAt * 1000).toLocaleTimeString()}`;
     });
     const choice = await showModal({
@@ -1416,7 +1416,7 @@ function defaultSettings(): AppSettings {
 
 function languageName(tab: Tab): string {
   if (tab.markdown) return "Markdown";
-  const name = (tab.info.path.split("/").pop() || "");
+  const name = tab.fileName();
   const ext = name.includes(".") ? name.split(".").pop()! : "";
   const map: Record<string, string> = {
     go: "Go", ts: "TypeScript", tsx: "TSX", js: "JavaScript", jsx: "JSX",

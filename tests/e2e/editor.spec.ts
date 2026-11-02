@@ -9,7 +9,7 @@
 
 import { test, expect, type Page } from "@playwright/test";
 import { mkdirSync, readFileSync, writeFileSync, rmSync } from "node:fs";
-import { resolve, join } from "node:path";
+import { basename, resolve, join } from "node:path";
 
 const docs = resolve(__dirname, ".fixtures");
 
@@ -78,7 +78,7 @@ async function openFile(page: Page, path: string, opts: { waitForTab?: boolean }
     void (window as never as { __xe: { app: { openPaths(p: string[]): Promise<void> } } }).__xe.app.openPaths([p]);
   }, path);
   if (opts.waitForTab !== false) {
-    const name = path.split("/").pop() || path;
+    const name = basename(path);
     await expect(page.locator(".tab.active")).toContainText(name, { timeout: 8000 });
   }
 }
@@ -466,7 +466,7 @@ test("documents opened with the app externally arrive in the editor", async ({ p
       body: JSON.stringify({ args: [[p]] }),
     });
   }, file);
-  const name = file.split("/").pop() || file;
+  const name = basename(file);
   await expect(page.locator(".tab.active")).toContainText(name, { timeout: 8000 });
   await expect(page.locator(".cm-content")).toContainText("opened externally");
 
@@ -518,7 +518,7 @@ test("session restore reopens the last session's documents", async ({ page }) =>
   await waitForAppReady(page);
   // The shared bridge home may hold a longer session from earlier tests —
   // the contract is that session.md is among the restored tabs.
-  const name = file.split("/").pop() || file;
+  const name = basename(file);
   await expect(page.locator(".tab", { hasText: name }).first()).toBeVisible({ timeout: 8000 });
 });
 
@@ -552,7 +552,7 @@ test("restore-session setting controls whether the session reopens", async ({ pa
     .toBe(false);
   await page.reload();
   await waitForAppReady(page);
-  const name = file.split("/").pop() || file;
+  const name = basename(file);
   try {
     await expect(page.locator(".tab.active")).toContainText("Untitled", { timeout: 8000 });
   } catch (e) {

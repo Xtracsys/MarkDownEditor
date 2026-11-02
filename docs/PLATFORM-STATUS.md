@@ -19,7 +19,7 @@ that build. Last updated: 2026-11-01 (public CI status).
 | --- | --- | --- | --- |
 | Architectures | arm64 + x86_64 (universal) | x64 | x64, arm64 |
 | **Built** | ✅ universal `.app` + DMG, ad-hoc signed | ✅ x64 `.exe` cross-built locally (zip); NSIS installer via CI | ❌ needs CI (webkit2gtk cgo; no Linux toolchain locally) |
-| **Auto-tested** (go / vitest / E2E) | ✅ / ✅ / ✅ | ⏳ CI pending | ⏳ CI pending |
+| **Auto-tested** (go / vitest / E2E) | ✅ / ✅ / ✅ | ✅ / ✅ / ❌ | ✅ / ✅ / ✅ |
 | **Manually tested** | ✅ launch + core edit/save smoke test (this machine, macOS 27 arm64) | ❌ | ❌ |
 | **Packaging** | `.app` bundle ✅; DMG not produced yet | `.exe` via CI; NSIS installer not configured | binary; AppImage/deb not configured |
 | **Signing** | Ad-hoc only. Developer-ID signing and notarization **not performed** — requires an Apple Developer certificate | Unsigned; Authenticode requires a certificate | N/A |
@@ -39,7 +39,11 @@ of 0600/0644), so package jobs were skipped. Run 54362b6 passed macOS, Ubuntu,
 and security scans; Windows Go tests passed, but its E2E server could not start
 because the Playwright command used Unix environment-variable syntax. The
 server now receives that variable through Playwright's environment setting.
-A later green run is still required.
+Run 815b497 passed macOS, Ubuntu, and security scans. Windows Go and frontend
+checks passed and its E2E server started; 21 E2E checks failed because a test
+helper compared a full Windows path with the filename shown in the tab. Path
+handling has been corrected in the pending update; a green run is still
+required. The package job was skipped.
 
 ## Known limitations & blockers (stated plainly)
 
@@ -48,10 +52,11 @@ A later green run is still required.
    tests all three OSes headlessly, but “it compiles and the headless suites
    pass” is not “it works”. Until someone runs those builds interactively,
    treat those platforms as unverified.
-2. **Public CI has not passed yet.** The latest run, 54362b6, passed macOS,
-   Ubuntu, and security scans. Windows Go tests passed, but its E2E server
-   could not start due to Unix-only environment-variable syntax. The config
-   now passes that variable through Playwright; a green run is still required.
+2. **Public CI has not passed yet.** The latest completed run, 815b497, passed
+   macOS, Ubuntu, and security scans. Windows Go and frontend checks passed,
+   but its E2E tests failed on a Windows path comparison in the test helpers.
+   The helper and frontend path handling have been corrected; a green run is
+   still required.
 3. **Code signing / notarization** for macOS and Windows requires certificates
    that are not available in this environment. macOS builds are ad-hoc signed
    (Gatekeeper will show an “unidentified developer” prompt for local builds;

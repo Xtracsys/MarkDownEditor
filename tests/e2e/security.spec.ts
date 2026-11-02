@@ -8,7 +8,7 @@
 
 import { test, expect, type Page } from "@playwright/test";
 import { mkdirSync, writeFileSync } from "node:fs";
-import { resolve, join } from "node:path";
+import { basename, resolve, join } from "node:path";
 
 const docs = resolve(__dirname, ".secfixtures");
 
@@ -204,6 +204,6 @@ async function openFile(page: Page, path: string) {
     void (window as never as { __xe: { app: { openPaths(p: string[]): Promise<void> } } })
       .__xe.app.openPaths([p]);
   }, path);
-  const name = path.split("/").pop() || path;
+  const name = basename(path);
   await expect(page.locator(".tab.active")).toContainText(name, { timeout: 8000 });
 }

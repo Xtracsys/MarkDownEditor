@@ -49,7 +49,7 @@ export async function detectLanguage(
   path: string,
   firstLines: string,
 ): Promise<LanguageSupport | null> {
-  const name = path.split("/").pop() || path;
+  const name = path.replace(/\\/g, "/").split("/").pop() || path;
   const byName = LanguageDescription.matchFilename(languages, name);
   if (byName) {
     try {
@@ -87,7 +87,7 @@ export function markdownLanguage(): LanguageSupport {
 }
 
 export function isMarkdownPath(path: string): boolean {
-  const name = (path.split("/").pop() || "").toLowerCase();
+  const name = (path.replace(/\\/g, "/").split("/").pop() || "").toLowerCase();
   return name === "markdown" || /\.(md|markdown|mkd|mdown|mkdown|mdx)$/.test(name);
 }
 

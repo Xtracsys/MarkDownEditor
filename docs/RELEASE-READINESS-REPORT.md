@@ -26,8 +26,12 @@ a Windows FIFO-test compile error. Run c13a3e1 passed macOS (including E2E),
 Ubuntu, and security scans; Windows then failed POSIX file-mode assertions.
 Run 54362b6 passed macOS, Ubuntu, and security scans, and Windows Go tests,
 but Windows E2E could not start its server due to Unix-only environment
-syntax. The config now uses Playwright's environment setting; a later green
-run is still required before release publication.
+syntax. Run 815b497 passed macOS, Ubuntu, and security scans. Windows Go and
+frontend checks passed and the E2E server started, but 21 E2E checks failed
+because path assertions expected a full Windows path instead of the displayed
+filename. Cross-platform path handling is corrected in the pending update; a
+green run is still required before release publication. The package job was
+skipped.
 
 ## 1. Scope and constraints
 
