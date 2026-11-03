@@ -5,16 +5,16 @@ ARTICLES = [
     dict(
         slug="project-overview",
         title="README.md — the user-facing contract",
-        category="overview", path="README.md", lines=194, lang="Markdown",
+        category="overview", path="README.md", lines=202, lang="Markdown",
         status="META", related=["release-history", "architecture"],
         lead=[
-            "README.md is the promise the rest of the codebase has to keep. It opens with the product's single non-negotiable rule — a file's bytes change only in response to user edits, and only when the user saves — and derives every advertised feature from it: byte-faithful saves, no metadata injection, no silent reformatting, offline-only operation.",
-            "It was rewritten four times as features landed, and every claim in it is backed by a test somewhere in the repository. The install section documents the drag-to-install DMG flow and the Gatekeeper right-click-Open dance for ad-hoc-signed builds, because the project ships without Apple notarization until a Developer certificate exists.",
+            "README.md introduces the editor's central guarantee: documents change only through user edits and explicit saves. Its feature descriptions focus on the mechanisms that support that guarantee, including byte-faithful file handling, safe saves, a local-first design, and a Markdown preview that blocks remote resources by default.",
+            "The README also gives platform-specific build and installation guidance and links to the architecture, security, and platform-status documentation for readers who need more detail.",
         ],
         sections=[
-            ("Feature list discipline", [
-                "Each bullet in the editing/markdown/security sections names a mechanism that exists in code: per-line terminator tracking, the O_EXCL image writer, the origin/Host/Content-Type guard on the test bridge. When a feature was added in 0.1.5 (session restore, Open Recent, convert commands, outline, image paste, reveal, print), the README bullet was written to describe the guarantee, not the UI — e.g. image paste 'writes a new file next to the document (user-named, never overwrites, PNG/JPEG sniffed)'.",
-                "The wiki link section was added last, pointing at WIKI.md for the full project story, keeping the README user-facing rather than historical.",
+            ("Product claims and evidence", [
+                "The file-integrity section describes the supported encodings, byte-order marks, per-line terminators, and final-newline behavior. Save behavior includes unchanged-file detection, atomic replacement, and external-change checks; the related implementation is documented in the file I/O articles.",
+                "Privacy and preview claims are described alongside their concrete controls: no background network requests, sanitization before Markdown rendering, a sandboxed preview frame, and a restricted handler for local images.",
             ]),
         ],
         key_items=[
@@ -25,45 +25,45 @@ ARTICLES = [
     ),
     dict(
         slug="release-history",
-        title="WIKI.md — the complete project record",
-        category="overview", path="WIKI.md", lines=265, lang="Markdown",
+        title="WIKI.md — project guide",
+        category="overview", path="WIKI.md", lines=41, lang="Markdown",
         status="META", related=["project-overview", "security-model"],
         lead=[
-            "WIKI.md is the historical encyclopedia of this thread: what was built in each release, what broke, how it was diagnosed, and what the project taught. It exists because several of the bugs here were unusual enough to be worth remembering — a bindings namespace that moved when a struct changed packages, a build pipeline silently shipping stale binaries because a codesign step aborted, an iCloud file provider that renamed README.md and corrupted build outputs.",
-            "Each release section follows the same shape: what shipped, what the war story was, and how it was verified. The 'war stories' section distills the transferable lessons: error visibility is a feature (silent fallbacks masked dead bindings for three releases), static audits find design flaws while dynamic tests find wiring bugs, and nil slices crossing Go→JSON→TS crash on .length.",
+            "WIKI.md is a concise starting point for readers who want the product's core guarantees, a high-level architecture summary, and links to the detailed project documentation.",
+            "The generated tabbed wiki provides file-level reference material. README.md remains the main entry point for installation, features, and platform support.",
         ],
         sections=[
-            ("Release highlights", [
-                "0.1.0 — working editor: Go file-integrity engine, Wails app, frontend, e2e bridge. First acceptance run caught a re-entrant-save bug in the external-change flow.",
-                "0.1.1 — 'Open With' (macOS Apple Events were never wired), crash recovery, first static security audit.",
-                "0.1.2 — the bindings catastrophe: App moved from package main to internal/app, silently renaming window.go.main.App to window.go.app.App; a strict CSP meta broke the injected runtime; a nil-slice crashed startup. Fixed plus the error-visibility work that made it diagnosable.",
-                "0.1.3 — icon fix (iconfile.icns name mismatch) + three-audit bug hunt (packaging, frontend QA, regression review).",
-                "0.1.4 — stale-artifact pipeline fix: build stamp verification after the installed app was found running old code; iCloud detritus countermeasures.",
-                "0.1.5 — dynamic security testing (fuzzers, XSS battery, HTTP attack suite) + the approved roadmap features: session restore (with setting), Open Recent, convert commands, outline, image paste, reveal, print.",
-                "0.1.6 — round-5/6 fix-verification: the host-pinning wiring caught unwired and fixed with live route tests; the Restore-session settings row (a silent str.replace no-op had faked it); Settings modal inert trap; session-store atomicity; a committed test binary removed. The wiki you are reading is part of the release.",
+            ("Core design guarantees", [
+                "File loading and saving preserve supported encodings and line endings, including mixed line endings. Unchanged files are not rewritten, writes use a temporary file and atomic replacement, and external changes are checked before saving.",
+                "The application works locally without accounts, telemetry, or background network access. Crash recovery is optional and disabled by default; Markdown preview sanitizes content and blocks remote resources unless a user explicitly opens a link.",
+            ]),
+            ("Where to learn more", [
+                "README.md covers installation, usage, build commands, and current platform status. docs/ARCHITECTURE.md explains the Go backend and TypeScript frontend. docs/SECURITY-AUDIT.md records the security model and verification evidence, while docs/PLATFORM-STATUS.md tracks platform coverage.",
+                "The tabbed reference at wiki/index.html links source files to their purpose, related components, and relevant tests.",
             ]),
         ],
         key_items=[
-            ("War story: silent fallbacks", "the settings fallback masked dead backend bindings until the fatal-backend screen was added"),
-            ("War story: iCloud", "synced folders rename files mid-build, re-attach codesign-breaking xattrs, and resurrect deleted conflict copies into go:embed"),
-            ("War story: test the wiring", "guard() had a unit test while the handler never called it — only the live HTTP attack suite caught it"),
+            ("README.md", "User-facing overview, installation, and build instructions"),
+            ("docs/ARCHITECTURE.md", "Application components and data flow"),
+            ("wiki/index.html", "Tabbed source and concept reference"),
         ],
     ),
     dict(
         slug="security-model",
         title="docs/SECURITY-AUDIT.md + SECURITY.md — the security record",
-        category="overview", path="docs/SECURITY-AUDIT.md", lines=202, lang="Markdown",
+        category="overview", path="docs/SECURITY-AUDIT.md", lines=229, lang="Markdown",
         status="META", related=["e2e-serve", "fe-markdown", "fileio-save"],
         lead=[
-            "The security record spans four audit rounds plus a dynamic-testing program. The model is defense in depth around untrusted content: the Markdown preview is a sandboxed iframe (allow-same-origin, NO allow-scripts) with CSP default-src 'none', fed by marked → DOMPurify → URL rewriting; local images are served only from the open document's directory tree through a sniffed, size-capped, SVG-excluding handler; the only outbound network action in the shipped app is a user-clicked http(s) link validated in Go.",
+            "The security model uses layered controls around untrusted content. Markdown is sanitized before rendering in a sandboxed iframe with scripts disabled and a restrictive content security policy. Local images are served only from the open document's directory tree through a content-sniffed, size-capped handler; the only outbound network action in the shipped app is a user-clicked HTTP(S) link validated in Go.",
             "SECURITY.md is the disclosure policy: scope (fileio, preview sandbox, image handler, settings, dependency vulnerabilities), out-of-scope (the webview engines themselves), design guarantees researchers should test, and the crash-recovery data disclosure (0600 snapshots in app-data only).",
         ],
         sections=[
-            ("Round-by-round", [
-                "Round 1 (static, at 0.1.1): preview sandbox verified; image-handler containment hardened; e2e bridge origin/Host/Content-Type guard added after the drive-by-write finding; Go toolchain pinned to 1.26.10 for nine reachable stdlib CVEs.",
-                "Round 2 (frontend): sanitizer configuration, srcdoc/CSP construction, DOM hygiene (textContent everywhere) verified; four low fixes applied.",
-                "Round 3 (dynamic, at 0.1.5): Go fuzzers (60M+ execs), a 26-vector live XSS battery, and a 19-check HTTP attack suite. The dynamic suite caught two real regressions: the bridge guard dropped from the handler, and the same guard over-rejecting same-origin POSTs (browsers attach Origin to all non-GET requests).",
-                "Round 4 (0.1.5 features): WriteImageFile containment provable (charset-restricted names, fixed extension, O_EXCL), menu action round-trip injection-proof; fixes for the normalize trailing-terminator bug and RevealPath flag-like paths.",
+            ("Content and file boundaries", [
+                "The Markdown path runs marked output through DOMPurify, rewrites resource URLs, then renders in an iframe without script permission under a default-src 'none' policy. Remote images are replaced with visible blocked notes. Local images must remain inside the open document's directory tree, are content-sniffed, and are capped at 20 MB; SVG is excluded.",
+                "The shipped application has no network listener or background request path. It validates a user-clicked HTTP(S) link before opening it. Crash-recovery snapshots are optional, stored in the application's private data directory, and are cleared when the user saves, closes, discards, or disables recovery.",
+            ]),
+            ("Verification evidence", [
+                "The repository includes Go fuzz tests, a 26-vector live preview security suite, and a 19-check HTTP attack suite for the loopback test bridge. The project security audit describes their scope and limitations. CI also runs govulncheck and npm audit; dependency results apply to the toolchain and lockfiles at the commit being reviewed.",
             ]),
         ],
         key_items=[

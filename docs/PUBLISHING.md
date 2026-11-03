@@ -11,29 +11,19 @@ and binary publishing; it is not an initial repository-creation checklist.
       the deb maintainer field.
 - [x] Apache-2.0 license text in `LICENSE`; trademark boundary in
       `TRADEMARKS.md`; third-party notices in `THIRD-PARTY-NOTICES.md`.
-- [x] `CHANGELOG.md` covers 0.1.0–0.1.6.
-- [ ] No GitHub tags, releases, or packages have been published. Local tags
-      `v0.1.6` and `v0.1.7` are not published tags.
+- [x] `CHANGELOG.md` records the project version history; confirm it matches the release being prepared.
+- [ ] Inspect GitHub tags, releases, and packages before each release. Local
+      tags alone are not published release artifacts.
 - [x] GitHub templates: PR integrity checklist, bug report, feature request;
       CI workflow (3-OS test + package + security jobs) on push/PR.
-- [x] Scanners clean in the recorded local readiness review: govulncheck 0,
-      npm audit 0 (production), secrets sweep 0 true positives, no large stray
-      binaries in git.
-- [ ] Public CI must pass on the current `main` commit before a release. Run
-      `88d846d` passed all three test jobs and security scans, but macOS DMG
-      packaging failed because Pillow was missing; the workflow now installs it.
+- [ ] Run the dependency, security, and secret scans required for the release
+      candidate. Prior results are not evidence for a later commit.
+- [ ] Check the Actions run for the exact source commit. Require its configured
+      test, packaging, and security jobs to pass before release.
 
-## 1. Pre-flight (current — 2026-11-01)
+## 1. Pre-flight
 
-The canonical repository now lives at:
-**/Volumes/XSdrive/Projects/MarkDownEditor**
-
-**Interim backup (2026-10-31):** while this volume is the only copy, a full
-git bundle of the repository — history, both tags, working-tree state as of
-HEAD `337af75` — is stored at `~/Backups/xtracsys-editor-2026-10-31.bundle`
-on the internal disk. If anything happens to this volume before the new
-APFS drive arrives: `git clone ~/Backups/xtracsys-editor-2026-10-31.bundle`
-restores everything.
+Run release commands from the root of the checked-out repository. Keep backups and machine-specific paths outside the repository; do not commit local paths or backup archives.
 
 ## 2. Push source updates
 
@@ -49,11 +39,7 @@ approved that release and the current CI run is green.
 
 ## 3. Verify CI on all three OSes
 
-Watch the Actions tab after pushing. Run 88d846d passed all three OS test
-jobs, including Windows E2E, and the security scan. The macOS app bundle built,
-but DMG packaging failed because Pillow was missing; the workflow now installs
-it before creating the DMG. Require a green test matrix, package jobs, and
-security scan before publishing a release.
+Review GitHub Actions for the exact source commit. Require every configured test and security job to pass. Confirm the packaging job produced the expected artifacts; do not infer current status from an earlier run.
 
 ## 4. Create an explicitly approved GitHub release
 

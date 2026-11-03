@@ -1,8 +1,9 @@
 # Xtracsys Editor
 
 A local-first desktop editor for plain text, code, configuration files, and
-Markdown — built for one non-negotiable rule: **your files stay ordinary,
-portable text files, byte-for-byte what you saved.**
+Markdown — built around one promise: **your files stay ordinary, portable text
+files, byte-for-byte as saved.** [Read the Xtracsys orchestration playbook](https://github.com/Xtracsys/Xtracsys/blob/main/docs/ORCHESTRATION_GUIDE.md)
+for the planning and review workflow behind this project.
 
 ![Light split view](docs/screenshots/light-split.png)
 
