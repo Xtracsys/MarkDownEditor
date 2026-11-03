@@ -111,14 +111,17 @@ metadata folders, no backups — is ever written next to your documents.
 
 ## Install
 
-Prebuilt packages are not published yet. Until the first release, build from
-source (below) — it takes one command on each platform.
+Download the current release from
+[GitHub Releases](https://github.com/Xtracsys/MarkDownEditor/releases/latest).
+Choose the universal macOS DMG, the Windows x64 installer or ZIP, or the Linux
+x64 Debian package or tarball. Each release includes SHA-256 checksums for its
+download files.
 
 **Installing the macOS DMG:** open the image and drag Xtracsys Editor into
 the Applications folder next to it, then eject the disk and launch from
-Applications. Because the build is ad-hoc signed (no Apple Developer
-certificate yet), Gatekeeper asks on first launch: right-click the app in
-Applications and choose **Open** once; afterwards it launches normally.
+Applications. The DMG is ad-hoc signed and not notarized, so macOS may show a
+Gatekeeper notice on first launch. The Windows and Linux packages are CI-built;
+they have not been manually verified on each platform.
 
 ## Build from source
 

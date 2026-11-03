@@ -16,6 +16,9 @@ and binary publishing; it is not an initial repository-creation checklist.
       tags alone are not published release artifacts.
 - [x] GitHub templates: PR integrity checklist, bug report, feature request;
       CI workflow (3-OS test + package + security jobs) on push/PR.
+- [x] Release 0.1.7 notes and changelog are prepared; the Linux Debian
+      package version is derived from `wails.json` so the package and filename
+      match the app version.
 - [ ] Run the dependency, security, and secret scans required for the release
       candidate. Prior results are not evidence for a later commit.
 - [ ] Check the Actions run for the exact source commit. Require its configured
@@ -45,10 +48,12 @@ Review GitHub Actions for the exact source commit. Require every configured test
 
 Only after the owner approves a release, the current `main` CI run is green,
 and matching release notes and artifacts have been prepared and verified,
-create the GitHub release. Attach the exact artifacts produced by
-`scripts/build-all.sh` for the approved version, plus `dist/SHA256SUMS.txt`,
-and use the matching `docs/RELEASE-NOTES-<version>.md` file. No release
-artifacts are currently published.
+create the GitHub release. Attach the macOS and Windows artifacts produced by
+`scripts/build-all.sh` for the approved version, plus the Linux tarball and
+Debian package produced by the exact successful CI run. Publish one
+`SHA256SUMS.txt` covering every attached installer and use the matching
+`docs/RELEASE-NOTES-<version>.md` file. Before version 0.1.7, no binary
+release artifacts had been published.
 
 ## 5. Post-publish
 

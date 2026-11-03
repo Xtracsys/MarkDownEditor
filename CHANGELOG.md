@@ -3,7 +3,7 @@
 All notable changes to Xtracsys Editor. Versions follow semver; the format
 follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [Unreleased]
+## [0.1.7] — 2026-11-03
 
 ### Changed
 - **Crash recovery is now opt-in and off by default.** Snapshots are
