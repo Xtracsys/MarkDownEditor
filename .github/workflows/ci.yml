@@ -125,7 +125,12 @@ jobs:
         run: go install github.com/wailsapp/wails/v2/cmd/wails@v2.17.0
 
       - name: Build application
+        if: runner.os != 'Linux'
         run: ~/go/bin/wails build -platform ${{ matrix.platform }}
+
+      - name: Build application with WebKitGTK 4.1
+        if: runner.os == 'Linux'
+        run: ~/go/bin/wails build -platform linux/amd64 -tags webkit2_41
 
       - name: Set up Python for macOS DMG
         if: runner.os == 'macOS'
