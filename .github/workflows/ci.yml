@@ -155,7 +155,11 @@ jobs:
         run: |
           choco install -y nsis
           $env:PATH = "C:\Program Files (x86)\NSIS;$env:PATH"
-          ~/go/bin/wails build -platform windows/amd64 -f nsis
+          ~/go/bin/wails build -platform windows/amd64 -nsis
+          $version = node -p "require('./wails.json').info.productVersion"
+          $installer = "build/bin/xtracsys-editor-amd64-installer.exe"
+          if (!(Test-Path $installer)) { throw "Wails did not produce the NSIS installer: $installer" }
+          Move-Item $installer "build/bin/xtracsys-editor-$version-windows-x64-setup.exe"
           Compress-Archive -Path build/bin/xtracsys-editor.exe -DestinationPath build/bin/xtracsys-editor-windows-x64.zip
 
       - name: Package installers (Linux tar + deb)
