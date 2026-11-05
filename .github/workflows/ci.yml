@@ -173,7 +173,7 @@ jobs:
             mkdir -p pkg/usr/share/icons/hicolor/${size}x${size}/apps
             cp build/linux/${size}x${size}.png pkg/usr/share/icons/hicolor/${size}x${size}/apps/xtracsys-editor.png
           done
-          printf 'Package: xtracsys-editor\nVersion: %s\nSection: editors\nPriority: optional\nArchitecture: amd64\nInstalled-Size: 20000\nMaintainer: Xtracsys LLC <opensource@xtracsys.com>\nDescription: Local-first text and Markdown editor\n Byte-faithful plain-text and Markdown editing with live preview.\nDepends: libwebkit2gtk-4.1-0, libgtk-3-0\n' "$VERSION" > pkg/DEBIAN/control
+          printf 'Package: xtracsys-editor\nVersion: %s\nSection: editors\nPriority: optional\nArchitecture: amd64\nInstalled-Size: 20000\nMaintainer: Xtracsys LLC <josh@xtracsys.com>\nDescription: Local-first text and Markdown editor\n Byte-faithful plain-text and Markdown editing with live preview.\nDepends: libwebkit2gtk-4.1-0, libgtk-3-0\n' "$VERSION" > pkg/DEBIAN/control
           printf '[Desktop Entry]\nType=Application\nName=Xtracsys Editor\nExec=xtracsys-editor\nIcon=xtracsys-editor\nCategories=Development;TextEditor;\n' > pkg/usr/share/applications/xtracsys-editor.desktop
           dpkg-deb --build --root-owner-group pkg "build/bin/xtracsys-editor_${VERSION}_amd64.deb"
 

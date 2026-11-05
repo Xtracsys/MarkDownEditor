@@ -202,4 +202,4 @@ tests/e2e            Playwright acceptance suite
 ```
 
 Questions about MarkDownEditor, security reports, or anything else about the
-project: **opensource@xtracsys.com**.
+project: **josh@xtracsys.com**.
